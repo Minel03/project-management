@@ -17,19 +17,19 @@ AuraBoard is a state-of-the-art, full-stack visual project tracker and Kanban bo
 
 3. **📊 Dynamic Kanban Board with Custom Drag-and-Drop**
    - Organizes project tasks into visual lanes: **Todo**, **In Progress**, and **Done**.
-   - Custom **HTML5 Drag-and-Drop** implementation using native React handlers (`onDragStart`, `onDragOver`, `onDrop`) for extremely smooth and lightweight drag actions without external bundle bloat.
-   - Task CRUD: Assign tasks to specific project members, write notes, and edit details via dynamic modal dialogs.
+    - Custom **HTML5 Drag-and-Drop** implementation using native React handlers (`onDragStart`, `onDragOver`, `onDrop`) for extremely smooth and lightweight drag actions.
+    - Task CRUD: Assign tasks to specific project members, write notes, and edit details via dynamic modular dialog overlays built with **shadcn/ui**.
 
-4. **📜 Audit Activity Change Log (Live Feed)**
-   - Automatically monitors and records task updates in the database:
-     - Task creation (`'creation'`).
-     - Task modifications such as title/description/assignee edits (`'modification'`).
-     - Kanban lane movement transitions (`'status_change'`).
-   - A side-by-side **Live Change Log Feed** showing team activity in real time.
+4. **📜 Global Activity Feed & Filters Page**
+    - A dedicated **Activity Feed** page `/activity` showing all change logs globally.
+    - Features a search input to search logs by task title, operator name, or remark content.
+    - Features a project filter dropdown to restrict results to a single project.
+    - Supports dynamic inline editing of log remarks using a popup interface.
 
 5. **⚡ 1-Click Database Setup & Seeding (Evaluator Friendly)**
-   - Features an automated initialization API endpoint (`/api/db/init`) with an optional `?reset=true` parameter.
-   - **Interactive Control Panel**: We built this directly into the login screen! Anyone reviewing your application can click **"Reset & Seed Demo"** to automatically compile the SQL schemas and insert a gorgeous mockup environment with pre-defined users, projects, tasks, and historical logs.
+    - Features an automated initialization API endpoint (`/api/db/init`) with an optional `?reset=true` parameter.
+    - **Interactive Control Panel**: We built this directly into the login screen! Anyone reviewing your application can click **"Reset & Seed Demo"** to automatically compile the SQL schemas and insert a premium mockup environment with pre-defined users, projects, tasks, and historical logs.
+
 
 ---
 
@@ -151,9 +151,9 @@ CREATE TABLE change_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   task_id INT NOT NULL,
   user_id INT NOT NULL,
-  change_type VARCHAR(50) NOT NULL,
-  old_value TEXT,
-  new_value TEXT,
+  old_status ENUM('Todo', 'In Progress', 'Done') NOT NULL,
+  new_status ENUM('Todo', 'In Progress', 'Done') NOT NULL,
+  remark TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -168,6 +168,8 @@ This application fulfills all constraints listed in the Developer Assessment req
 - **Authentication**: Fully implemented Register/Login/Me flow using bcrypt & JWT session tokens.
 - **Projects**: Visual creation, updates, and cascading deletion.
 - **Tasks**: Lanes for Todo, In Progress, Done, with instant drag-and-drop state syncing.
-- **Change Log**: Real-time auditing of creations, edits, and lane transfers mapped directly to user activity.
+- **Change Log**: Real-time auditing of creations, edits, and lane transfers mapped directly to user activity, featuring status-change remarks.
 - **Predefined Seeding Endpoint**: Exposed at `/api/db/init` and triggerable via one-click in the frontend UI.
-- **Code Quality**: Highly structured folder organization (MVC structure in backend, Context-based hooks in frontend) utilizing ESM modules, full TypeScript integrations, and Tailwind styling.
+- **Code Quality**: Highly structured folder organization (MVC structure in backend, modular components in frontend) utilizing ESM modules, full TypeScript integrations, **shadcn/ui** components, and Tailwind styling.
+- **Enhancements (Creativity)**: Built a dedicated Global Activity Feed and filters page (`/activity`) allowing audit trail queries, search, and inline remark updates.
+
