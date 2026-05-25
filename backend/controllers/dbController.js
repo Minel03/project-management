@@ -19,8 +19,11 @@ export async function initDatabase(req, res) {
       console.log('Reset parameter is true. Dropping existing tables...');
       await pool.query('SET FOREIGN_KEY_CHECKS = 0');
       await pool.query('DROP TABLE IF EXISTS change_logs');
+      await pool.query('DROP TABLE IF EXISTS task_assignees');
       await pool.query('DROP TABLE IF EXISTS tasks');
       await pool.query('DROP TABLE IF EXISTS projects');
+      await pool.query('DROP TABLE IF EXISTS team_members');
+      await pool.query('DROP TABLE IF EXISTS teams');
       await pool.query('DROP TABLE IF EXISTS users');
       await pool.query('SET FOREIGN_KEY_CHECKS = 1');
     }
@@ -34,7 +37,25 @@ export async function initDatabase(req, res) {
         username VARCHAR(255) NOT NULL UNIQUE,
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
+        role ENUM('admin','member') NOT NULL DEFAULT 'member',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      // Teams table
+      `CREATE TABLE IF NOT EXISTS teams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        leader_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (leader_id) REFERENCES users(id) ON DELETE CASCADE
+      )`,
+      // Team members join table
+      `CREATE TABLE IF NOT EXISTS team_members (
+        team_id INT NOT NULL,
+        user_id INT NOT NULL,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (team_id, user_id),
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )`,
       // Projects table
       `CREATE TABLE IF NOT EXISTS projects (
@@ -58,6 +79,15 @@ export async function initDatabase(req, res) {
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
       )`,
+      // Task assignees join table
+      `CREATE TABLE IF NOT EXISTS task_assignees (
+        task_id INT NOT NULL,
+        user_id INT NOT NULL,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (task_id, user_id),
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`,
       // Change logs table
       `CREATE TABLE IF NOT EXISTS change_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -69,11 +99,36 @@ export async function initDatabase(req, res) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )`
+      )`,
     ];
 
     for (const sql of tables) {
       await pool.query(sql);
+    }
+
+    // Ensure role column exists for compatibility with older database states
+    const [roleColumn] = await pool.query('SHOW COLUMNS FROM users LIKE ?', [
+      'role',
+    ]);
+    if (roleColumn.length === 0) {
+      await pool.query(
+        "ALTER TABLE users ADD COLUMN role ENUM('admin','member') NOT NULL DEFAULT 'member'",
+      );
+    }
+
+    // If task_assignees exists but is empty, migrate any legacy assigned_to values
+    const [taskAssigneesTable] = await pool.query(
+      "SHOW TABLES LIKE 'task_assignees'",
+    );
+    if (taskAssigneesTable.length > 0) {
+      const [existingAssignees] = await pool.query(
+        'SELECT COUNT(*) as count FROM task_assignees',
+      );
+      if (existingAssignees[0].count === 0) {
+        await pool.query(
+          'INSERT IGNORE INTO task_assignees (task_id, user_id) SELECT id, assigned_to FROM tasks WHERE assigned_to IS NOT NULL',
+        );
+      }
     }
 
     // 4. Seeding check
@@ -88,6 +143,8 @@ export async function initDatabase(req, res) {
       await pool.query('TRUNCATE TABLE change_logs');
       await pool.query('TRUNCATE TABLE tasks');
       await pool.query('TRUNCATE TABLE projects');
+      await pool.query('TRUNCATE TABLE team_members');
+      await pool.query('TRUNCATE TABLE teams');
       await pool.query('TRUNCATE TABLE users');
       await pool.query('SET FOREIGN_KEY_CHECKS = 1');
 
@@ -96,65 +153,143 @@ export async function initDatabase(req, res) {
       const hashedPassword = await bcrypt.hash('password123', salt);
 
       const usersData = [
-        ['john_doe', 'john@example.com', hashedPassword],
-        ['jane_smith', 'jane@example.com', hashedPassword],
-        ['bob_johnson', 'bob@example.com', hashedPassword]
+        ['john_doe', 'john@example.com', hashedPassword, 'admin'],
+        ['jane_smith', 'jane@example.com', hashedPassword, 'member'],
+        ['bob_johnson', 'bob@example.com', hashedPassword, 'member'],
       ];
 
       const userIds = [];
       for (const userData of usersData) {
         const [result] = await pool.query(
-          'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-          userData
+          'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+          userData,
         );
         userIds.push(result.insertId);
       }
 
+      // Seed Teams
+      const [teamResult] = await pool.query(
+        'INSERT INTO teams (name, leader_id) VALUES (?, ?)',
+        ['Alpha Squad', userIds[0]],
+      );
+      const teamId = teamResult.insertId;
+      await pool.query(
+        'INSERT INTO team_members (team_id, user_id) VALUES (?, ?), (?, ?), (?, ?)',
+        [teamId, userIds[0], teamId, userIds[1], teamId, userIds[2]],
+      );
+
       // Seed Projects
       const projectsData = [
-        ['Website Redesign', 'Overhaul the company marketing site for modern aesthetics and speed.', userIds[0]],
-        ['Mobile Application', 'Develop a React Native mobile application for customer portal.', userIds[1]]
+        [
+          'Website Redesign',
+          'Overhaul the company marketing site for modern aesthetics and speed.',
+          userIds[0],
+        ],
+        [
+          'Mobile Application',
+          'Develop a React Native mobile application for customer portal.',
+          userIds[1],
+        ],
       ];
 
       const projectIds = [];
       for (const projData of projectsData) {
         const [result] = await pool.query(
           'INSERT INTO projects (name, description, user_id) VALUES (?, ?, ?)',
-          projData
+          projData,
         );
         projectIds.push(result.insertId);
       }
 
       // Seed Tasks for Project 1 (Website Redesign)
       const tasksData = [
-        [projectIds[0], 'Design UI mockup', 'Create Figma wireframes and high-fidelity mockups for key pages.', 'Done', userIds[0]],
-        [projectIds[0], 'Setup API routes', 'Create express endpoint structures and configure DB pool connection.', 'In Progress', userIds[1]],
-        [projectIds[0], 'Write testing suites', 'Configure Jest/Supertest suite for all endpoints.', 'Todo', null],
+        [
+          projectIds[0],
+          'Design UI mockup',
+          'Create Figma wireframes and high-fidelity mockups for key pages.',
+          'Done',
+          userIds[0],
+        ],
+        [
+          projectIds[0],
+          'Setup API routes',
+          'Create express endpoint structures and configure DB pool connection.',
+          'In Progress',
+          userIds[1],
+        ],
+        [
+          projectIds[0],
+          'Write testing suites',
+          'Configure Jest/Supertest suite for all endpoints.',
+          'Todo',
+          null,
+        ],
         // Seed Tasks for Project 2 (Mobile App)
-        [projectIds[1], 'Configure push notifications', 'Setup APNS and FCM services with token storage.', 'Todo', userIds[2]],
-        [projectIds[1], 'Integrate authentication UI', 'Implement signup, login screens and localstorage token handling.', 'Done', userIds[1]]
+        [
+          projectIds[1],
+          'Configure push notifications',
+          'Setup APNS and FCM services with token storage.',
+          'Todo',
+          userIds[2],
+        ],
+        [
+          projectIds[1],
+          'Integrate authentication UI',
+          'Implement signup, login screens and localstorage token handling.',
+          'Done',
+          userIds[1],
+        ],
       ];
 
       const taskIds = [];
       for (const tskData of tasksData) {
         const [result] = await pool.query(
           'INSERT INTO tasks (project_id, title, description, status, assigned_to) VALUES (?, ?, ?, ?, ?)',
-          tskData
+          tskData,
         );
         taskIds.push(result.insertId);
       }
 
+      for (let i = 0; i < tasksData.length; i++) {
+        const taskId = taskIds[i];
+        const assignedUserId = tasksData[i][4];
+        if (assignedUserId !== null) {
+          await pool.query(
+            'INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)',
+            [taskId, assignedUserId],
+          );
+        }
+      }
+
       // Seed Change Logs
       const logsData = [
-        [taskIds[0], userIds[0], 'Todo', 'Done', 'Completed initial design review'],
-        [taskIds[1], userIds[1], 'Todo', 'In Progress', 'Began setting up routes and DB configuration'],
-        [taskIds[4], userIds[1], 'In Progress', 'Done', 'API endpoints verified and integrated']
+        [
+          taskIds[0],
+          userIds[0],
+          'Todo',
+          'Done',
+          'Completed initial design review',
+        ],
+        [
+          taskIds[1],
+          userIds[1],
+          'Todo',
+          'In Progress',
+          'Began setting up routes and DB configuration',
+        ],
+        [
+          taskIds[4],
+          userIds[1],
+          'In Progress',
+          'Done',
+          'API endpoints verified and integrated',
+        ],
       ];
 
       for (const logData of logsData) {
         await pool.query(
           'INSERT INTO change_logs (task_id, user_id, old_status, new_status, remark) VALUES (?, ?, ?, ?, ?)',
-          logData
+          logData,
         );
       }
 
@@ -162,25 +297,25 @@ export async function initDatabase(req, res) {
         success: true,
         message: 'Database initialized and seeded successfully with demo data.',
         seeded: {
-          users: usersData.map(u => u[0]),
-          projects: projectsData.map(p => p[0]),
+          users: usersData.map((u) => u[0]),
+          projects: projectsData.map((p) => p[0]),
           tasks: tasksData.length,
-          logs: logsData.length
-        }
+          logs: logsData.length,
+        },
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Database initialized successfully. Existing tables left untouched. To force a full seed, request with ?reset=true'
+      message:
+        'Database initialized successfully. Existing tables left untouched. To force a full seed, request with ?reset=true',
     });
-
   } catch (error) {
     console.error('Database initialization failed:', error);
     return res.status(500).json({
       success: false,
       message: 'Database initialization failed',
-      error: error.message
+      error: error.message,
     });
   } finally {
     if (connection && connection.end) {

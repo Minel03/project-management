@@ -18,17 +18,14 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Validations
     if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
-
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError('Password must be at least 6 characters');
       return;
     }
-
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -45,106 +42,98 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center overflow-hidden px-4">
-      {/* Ambient Lights */}
-      <div className="ambient-glow -top-40 -left-40 w-96 h-96"></div>
-      <div className="ambient-glow-cyan -bottom-40 -right-40 w-96 h-96"></div>
+    <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-5">
 
-      <div className="w-full max-w-md z-10">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 mb-3">
-            <span className="text-3xl font-extrabold bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">AB</span>
+        {/* Logo */}
+        <div className="mb-2">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm font-bold text-white">
+              A
+            </div>
+            <span className="text-base font-semibold text-zinc-100 tracking-tight">PM Tool</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100">Create Account</h1>
-          <p className="text-sm text-slate-400 mt-1">Get started with the premium visual project tracker.</p>
+          <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Create account</h1>
+          <p className="text-sm text-zinc-500 mt-1">Fill in the details below to get started.</p>
         </div>
 
-        {/* Card Form */}
-        <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800 backdrop-blur-xl shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+        {/* Register Form */}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-red-950/40 border border-red-800 text-red-300 text-xs">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="username" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Username
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                  <User className="w-4 h-4" />
-                </span>
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                 <input
                   id="username"
                   type="text"
                   placeholder="john_doe"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-slate-200 placeholder-slate-600 transition-all"
+                  className="w-full pl-9 pr-3 py-2 rounded-md bg-zinc-950 border border-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-zinc-200 placeholder-zinc-600 transition-colors"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="email" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Email Address
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                  <Mail className="w-4 h-4" />
-                </span>
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                 <input
                   id="email"
                   type="email"
                   placeholder="john@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-slate-200 placeholder-slate-600 transition-all"
+                  className="w-full pl-9 pr-3 py-2 rounded-md bg-zinc-950 border border-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-zinc-200 placeholder-zinc-600 transition-colors"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="password" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </span>
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                 <input
                   id="password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-slate-200 placeholder-slate-600 transition-all"
+                  className="w-full pl-9 pr-3 py-2 rounded-md bg-zinc-950 border border-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-zinc-200 placeholder-zinc-600 transition-colors"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="confirmPassword" className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Confirm Password
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </span>
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                 <input
                   id="confirmPassword"
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-slate-200 placeholder-slate-600 transition-all"
+                  className="w-full pl-9 pr-3 py-2 rounded-md bg-zinc-950 border border-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm text-zinc-200 placeholder-zinc-600 transition-colors"
                   required
                 />
               </div>
@@ -153,27 +142,25 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl font-medium bg-linear-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-slate-100 shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+              className="w-full py-2 px-4 rounded-md font-medium bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Registering...</span>
+                  <span>Creating account...</span>
                 </>
               ) : (
-                <span>Register Account</span>
+                <span>Create Account</span>
               )}
             </button>
           </form>
 
-          <div className="text-center mt-6 pt-6 border-t border-slate-800/60">
-            <p className="text-xs text-slate-500">
-              Already have an account?{' '}
-              <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                Log In
-              </Link>
-            </p>
-          </div>
+          <p className="text-center text-xs text-zinc-500 pt-3 border-t border-zinc-800">
+            Already have an account?{' '}
+            <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </main>

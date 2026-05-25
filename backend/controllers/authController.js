@@ -5,8 +5,34 @@ import pool from '../config/db.js';
 // Helper to generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: '30d',
   });
+};
+
+const buildUserPayload = async (user) => {
+  const [leaderOf] = await pool.query(
+    'SELECT id, name FROM teams WHERE leader_id = ?',
+    [user.id],
+  );
+
+  const [memberOf] = await pool.query(
+    `SELECT t.id, t.name, t.leader_id, u.username AS leader_name
+     FROM teams t
+     JOIN team_members tm ON t.id = tm.team_id
+     JOIN users u ON t.leader_id = u.id
+     WHERE tm.user_id = ?`,
+    [user.id],
+  );
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role || 'member',
+    leaderOf,
+    memberOf,
+    created_at: user.created_at,
+  };
 };
 
 // @desc    Register a new user
@@ -20,27 +46,27 @@ export async function registerUser(req, res) {
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a username, email, and password'
+        message: 'Please provide a username, email, and password',
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long'
+        message: 'Password must be at least 6 characters long',
       });
     }
 
     // Check if user already exists
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ? OR username = ?',
-      [email, username]
+      [email, username],
     );
 
     if (existingUsers.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Username or email already exists'
+        message: 'Username or email already exists',
       });
     }
 
@@ -51,28 +77,30 @@ export async function registerUser(req, res) {
     // Insert user into DB
     const [result] = await pool.query(
       'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword]
+      [username, email, hashedPassword],
     );
 
     const userId = result.insertId;
+    const [newUserRows] = await pool.query(
+      'SELECT id, username, email, role, created_at FROM users WHERE id = ?',
+      [userId],
+    );
 
-    // Return user details and JWT
+    const payload = await buildUserPayload(newUserRows[0]);
+
     return res.status(201).json({
       success: true,
       data: {
-        id: userId,
-        username,
-        email,
-        token: generateToken(userId)
-      }
+        ...payload,
+        token: generateToken(userId),
+      },
     });
-
   } catch (error) {
     console.error('Registration error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error during user registration',
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -88,20 +116,20 @@ export async function loginUser(req, res) {
     if (!emailOrUsername || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email/username and password'
+        message: 'Please provide email/username and password',
       });
     }
 
     // Check for user (by email or username)
     const [users] = await pool.query(
-      'SELECT id, username, email, password FROM users WHERE email = ? OR username = ?',
-      [emailOrUsername, emailOrUsername]
+      'SELECT id, username, email, password, role, created_at FROM users WHERE email = ? OR username = ?',
+      [emailOrUsername, emailOrUsername],
     );
 
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid credentials',
       });
     }
 
@@ -113,27 +141,24 @@ export async function loginUser(req, res) {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid credentials',
       });
     }
 
-    // Return user details and JWT
+    const payload = await buildUserPayload(user);
     return res.status(200).json({
       success: true,
       data: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        token: generateToken(user.id)
-      }
+        ...payload,
+        token: generateToken(user.id),
+      },
     });
-
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error during user login',
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -144,15 +169,16 @@ export async function loginUser(req, res) {
 export async function getMe(req, res) {
   try {
     // req.user is populated by protect middleware
+    const payload = await buildUserPayload(req.user);
     return res.status(200).json({
       success: true,
-      data: req.user
+      data: payload,
     });
   } catch (error) {
     console.error('Get profile error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error retrieving profile'
+      message: 'Server error retrieving profile',
     });
   }
 }

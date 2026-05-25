@@ -4,11 +4,21 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import api from '../utils/api';
 
+interface TeamSummary {
+  id: number;
+  name: string;
+  leader_id?: number;
+  leader_name?: string;
+}
+
 interface User {
   id: number;
   username: string;
   email: string;
-  created_at: string;
+  role?: 'admin' | 'member';
+  leaderOf?: TeamSummary[];
+  memberOf?: TeamSummary[];
+  created_at?: string;
 }
 
 interface AuthContextType {
@@ -16,9 +26,15 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (emailOrUsername: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (
+    username: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   logout: () => void;
-  triggerDbInit: (reset: boolean) => Promise<{ success: boolean; message: string; seeded?: any }>;
+  triggerDbInit: (
+    reset: boolean,
+  ) => Promise<{ success: boolean; message: string; seeded?: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,7 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (emailOrUsername: string, password: string) => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/login', { emailOrUsername, password });
+      const res = await api.post('/api/auth/login', {
+        emailOrUsername,
+        password,
+      });
       if (res.data.success) {
         const { token, ...userData } = res.data.data;
         localStorage.setItem('token', token);
@@ -70,17 +89,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/');
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Login failed. Please check credentials.';
+      const errorMsg =
+        err.response?.data?.message ||
+        'Login failed. Please check credentials.';
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (
+    username: string,
+    email: string,
+    password: string,
+  ) => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/register', { username, email, password });
+      const res = await api.post('/api/auth/register', {
+        username,
+        email,
+        password,
+      });
       if (res.data.success) {
         const { token, ...userData } = res.data.data;
         localStorage.setItem('token', token);
@@ -106,7 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.get(`/api/db/init?reset=${reset}`);
       return res.data;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Database initialization request failed.';
+      const errorMsg =
+        err.response?.data?.message ||
+        'Database initialization request failed.';
       throw new Error(errorMsg);
     }
   };
@@ -121,8 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         triggerDbInit,
-      }}
-    >
+      }}>
       {children}
     </AuthContext.Provider>
   );

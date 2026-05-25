@@ -5,8 +5,15 @@ import pool from '../config/db.js';
 // @access  Private
 export async function getLogs(req, res) {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can view activity logs',
+      });
+    }
+
     const { projectId, taskId } = req.query;
-    
+
     let query = `
       SELECT 
         cl.id,
@@ -50,14 +57,13 @@ export async function getLogs(req, res) {
     return res.status(200).json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows,
     });
-
   } catch (error) {
     console.error('Get logs error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error retrieving activity logs'
+      message: 'Server error retrieving activity logs',
     });
   }
 }
@@ -67,35 +73,42 @@ export async function getLogs(req, res) {
 // @access  Private
 export async function createLog(req, res) {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can create activity logs',
+      });
+    }
+
     const { task_id, old_status, new_status, remark } = req.body;
     const userId = req.user.id;
 
     if (!task_id || !old_status || !new_status) {
       return res.status(400).json({
         success: false,
-        message: 'task_id, old_status, and new_status are required'
+        message: 'task_id, old_status, and new_status are required',
       });
     }
 
     const [result] = await pool.query(
       'INSERT INTO change_logs (task_id, user_id, old_status, new_status, remark) VALUES (?, ?, ?, ?, ?)',
-      [task_id, userId, old_status, new_status, remark || '']
+      [task_id, userId, old_status, new_status, remark || ''],
     );
 
     const [newLog] = await pool.query(
       'SELECT cl.*, u.username as operator_username FROM change_logs cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?',
-      [result.insertId]
+      [result.insertId],
     );
 
     return res.status(201).json({
       success: true,
-      data: newLog[0]
+      data: newLog[0],
     });
   } catch (error) {
     console.error('Create log error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error creating activity log'
+      message: 'Server error creating activity log',
     });
   }
 }
@@ -105,49 +118,61 @@ export async function createLog(req, res) {
 // @access  Private
 export async function updateLog(req, res) {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can update activity logs',
+      });
+    }
+
     const logId = req.params.id || req.body.change_log_id;
     const { old_status, new_status, remark } = req.body;
 
     if (!logId) {
       return res.status(400).json({
         success: false,
-        message: 'log ID is required'
+        message: 'log ID is required',
       });
     }
 
     // Check if exists
-    const [existing] = await pool.query('SELECT * FROM change_logs WHERE id = ?', [logId]);
+    const [existing] = await pool.query(
+      'SELECT * FROM change_logs WHERE id = ?',
+      [logId],
+    );
     if (existing.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Change log not found'
+        message: 'Change log not found',
       });
     }
 
     const currentLog = existing[0];
-    const updatedOldStatus = old_status !== undefined ? old_status : currentLog.old_status;
-    const updatedNewStatus = new_status !== undefined ? new_status : currentLog.new_status;
+    const updatedOldStatus =
+      old_status !== undefined ? old_status : currentLog.old_status;
+    const updatedNewStatus =
+      new_status !== undefined ? new_status : currentLog.new_status;
     const updatedRemark = remark !== undefined ? remark : currentLog.remark;
 
     await pool.query(
       'UPDATE change_logs SET old_status = ?, new_status = ?, remark = ? WHERE id = ?',
-      [updatedOldStatus, updatedNewStatus, updatedRemark, logId]
+      [updatedOldStatus, updatedNewStatus, updatedRemark, logId],
     );
 
     const [updatedLog] = await pool.query(
       'SELECT cl.*, u.username as operator_username FROM change_logs cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?',
-      [logId]
+      [logId],
     );
 
     return res.status(200).json({
       success: true,
-      data: updatedLog[0]
+      data: updatedLog[0],
     });
   } catch (error) {
     console.error('Update log error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error updating activity log'
+      message: 'Server error updating activity log',
     });
   }
 }

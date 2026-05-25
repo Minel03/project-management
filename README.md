@@ -1,6 +1,6 @@
-# AuraBoard — Premium Project Management Tool
+# Project Management Tool
 
-AuraBoard is a state-of-the-art, full-stack visual project tracker and Kanban board designed for modern, efficient workflows. It is built as a developer assessment submission using a robust **Next.js** frontend and an **Express/Node.js** backend backed by a **MySQL** database.
+A full-stack visual project tracker and Kanban board built as a developer assessment submission using a **Next.js** frontend and an **Express/Node.js** backend backed by a **MySQL** database.
 
 ---
 
@@ -14,36 +14,44 @@ AuraBoard is a state-of-the-art, full-stack visual project tracker and Kanban bo
 2. **📁 Project Space CRUD**
    - Create, update, and delete distinct project workspaces.
    - List and switch between projects instantaneously via the dashboard selector.
+   - Team leadership is supported via backend teams and membership assignment.
+   - Project creation is restricted to team leaders and admins.
 
 3. **📊 Dynamic Kanban Board with Custom Drag-and-Drop**
    - Organizes project tasks into visual lanes: **Todo**, **In Progress**, and **Done**.
-    - Custom **HTML5 Drag-and-Drop** implementation using native React handlers (`onDragStart`, `onDragOver`, `onDrop`) for extremely smooth and lightweight drag actions.
-    - Task CRUD: Assign tasks to specific project members, write notes, and edit details via dynamic modular dialog overlays built with **shadcn/ui**.
+   - Custom **HTML5 Drag-and-Drop** implementation using native React handlers (`onDragStart`, `onDragOver`, `onDrop`) for extremely smooth and lightweight drag actions.
+   - Task CRUD: Assign tasks to one or more project members, write notes, and edit details via dynamic modular dialog overlays built with **shadcn/ui**.
 
-4. **📜 Global Activity Feed & Filters Page**
-    - A dedicated **Activity Feed** page `/activity` showing all change logs globally.
-    - Features a search input to search logs by task title, operator name, or remark content.
-    - Features a project filter dropdown to restrict results to a single project.
-    - Supports dynamic inline editing of log remarks using a popup interface.
+4. **👥 Admin User & Team Management**
+   - Admin users can create and manage system accounts directly from the dashboard via the dedicated admin console.
+   - Role-based access control ensures only admins and team leaders can create projects and tasks.
+   - Team leaders can create teams and assign members; admins can manage any team or user.
+   - Admins can open the dedicated admin page at `/admin` to manage users and team membership.
 
-5. **⚡ 1-Click Database Setup & Seeding (Evaluator Friendly)**
-    - Features an automated initialization API endpoint (`/api/db/init`) with an optional `?reset=true` parameter.
-    - **Interactive Control Panel**: We built this directly into the login screen! Anyone reviewing your application can click **"Reset & Seed Demo"** to automatically compile the SQL schemas and insert a premium mockup environment with pre-defined users, projects, tasks, and historical logs.
+5. **�📜 Global Activity Feed & Filters Page**
+   - A dedicated **Activity Feed** page `/activity` showing all change logs globally.
+   - Features a search input to search logs by task title, operator name, or remark content.
+   - Features a project filter dropdown to restrict results to a single project.
+   - Supports dynamic inline editing of log remarks using a popup interface.
 
+6. **⚡ 1-Click Database Setup & Seeding (Evaluator Friendly)**
+   - Features an automated initialization API endpoint (`/api/db/init`) with an optional `?reset=true` parameter.
+   - **Interactive Control Panel**: We built this directly into the login screen! Anyone reviewing your application can click **"Reset & Seed Demo"** to automatically compile the SQL schemas and insert a premium mockup environment with pre-defined users, projects, tasks, and historical logs.
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: Next.js (App Router, Tailwind CSS v4, Axios, Lucide Icons)
-* **Backend**: Node.js & Express (ESM structure, JWT, Bcrypt, MySQL2)
-* **Database**: MySQL (Relational Schema with Cascading Deletions)
+- **Frontend**: Next.js (App Router, Tailwind CSS v4, Axios, Lucide Icons)
+- **Backend**: Node.js & Express (ESM structure, JWT, Bcrypt, MySQL2)
+- **Database**: MySQL (Relational Schema with Cascading Deletions)
 
 ---
 
 ## 🚀 Instructions to Run Locally
 
 ### Prerequisites
+
 Make sure you have **Node.js (v18+)** and a local **MySQL Server** installed and running on your machine.
 
 ---
@@ -64,12 +72,12 @@ Make sure you have **Node.js (v18+)** and a local **MySQL Server** installed and
    - User: `root`
    - Password: `""` (empty)
    - Database: `project_management`
-   *(Update these credentials if your local MySQL instance has a custom password or port).*
+     _(Update these credentials if your local MySQL instance has a custom password or port)._
 4. Start the Express server:
    ```bash
    npm start
    ```
-   *The server will start listening on **`http://localhost:5000`**.*
+   _The server will start listening on **`http://localhost:5000`**._
 
 ---
 
@@ -87,7 +95,7 @@ Make sure you have **Node.js (v18+)** and a local **MySQL Server** installed and
    ```bash
    npm run dev
    ```
-   *The frontend application will start running on **`http://localhost:3000`**.*
+   _The frontend application will start running on **`http://localhost:3000`**._
 
 ---
 
@@ -104,9 +112,18 @@ Make sure you have **Node.js (v18+)** and a local **MySQL Server** installed and
 
 Once seeded, you can log in immediately using these pre-registered users (all share the same password):
 
-* **John Doe** (Admin/Lead) — Username: `john_doe` | Password: `password123`
-* **Jane Smith** (Developer) — Username: `jane_smith` | Password: `password123`
-* **Bob Johnson** (Tester) — Username: `bob_johnson` | Password: `password123`
+- **John Doe** (Admin/Lead) — Username: `john_doe` | Password: `password123`
+- **Jane Smith** (Developer) — Username: `jane_smith` | Password: `password123`
+- **Bob Johnson** (Tester) — Username: `bob_johnson` | Password: `password123`
+
+> The admin account can additionally create new system users from the dashboard using the **Manage Users** button in the top-right header.
+
+---
+
+## ⚠️ Known Issues / Incomplete Functionality
+
+- The drag-and-drop move remark dialog is working, but the UX may still feel slightly delayed on very large task lists.
+- The app assumes a local MySQL server with default credentials; additional environment configuration may be required for non-standard setups.
 
 ---
 
@@ -146,6 +163,16 @@ CREATE TABLE tasks (
   FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Task Assignees Join Table (many-to-many task assignment)
+CREATE TABLE task_assignees (
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (task_id, user_id),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Change Logs Table
 CREATE TABLE change_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -165,11 +192,11 @@ CREATE TABLE change_logs (
 ## 🏆 Development Adherence
 
 This application fulfills all constraints listed in the Developer Assessment requirements:
-- **Authentication**: Fully implemented Register/Login/Me flow using bcrypt & JWT session tokens.
-- **Projects**: Visual creation, updates, and cascading deletion.
+
+- **Authentication**: Fully implemented Register/Login/Me flow using bcrypt & JWT session tokens, with admin/member-aware authorization checks and team leader membership awareness.
+- **Projects**: Visual creation, updates, and cascading deletion. New project/task creation is limited to team leaders and admins.
 - **Tasks**: Lanes for Todo, In Progress, Done, with instant drag-and-drop state syncing.
 - **Change Log**: Real-time auditing of creations, edits, and lane transfers mapped directly to user activity, featuring status-change remarks.
 - **Predefined Seeding Endpoint**: Exposed at `/api/db/init` and triggerable via one-click in the frontend UI.
 - **Code Quality**: Highly structured folder organization (MVC structure in backend, modular components in frontend) utilizing ESM modules, full TypeScript integrations, **shadcn/ui** components, and Tailwind styling.
 - **Enhancements (Creativity)**: Built a dedicated Global Activity Feed and filters page (`/activity`) allowing audit trail queries, search, and inline remark updates.
-
