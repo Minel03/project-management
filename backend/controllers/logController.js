@@ -5,13 +5,6 @@ import pool from '../config/db.js';
 // @access  Private
 export async function getLogs(req, res) {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can view activity logs',
-      });
-    }
-
     const { projectId, taskId } = req.query;
 
     let query = `
@@ -44,6 +37,13 @@ export async function getLogs(req, res) {
     if (taskId) {
       conditions.push('cl.task_id = ?');
       queryParams.push(taskId);
+    }
+
+    if (req.user.role !== 'admin') {
+      conditions.push(
+        '(p.user_id = ? OR t.assigned_to = ? OR EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id AND ta.user_id = ?))',
+      );
+      queryParams.push(req.user.id, req.user.id, req.user.id);
     }
 
     if (conditions.length > 0) {

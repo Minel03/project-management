@@ -1,202 +1,226 @@
 # Project Management Tool
 
-A full-stack visual project tracker and Kanban board built as a developer assessment submission using a **Next.js** frontend and an **Express/Node.js** backend backed by a **MySQL** database.
+A full-stack project management and Kanban board application built with a Next.js frontend, an Express/Node.js backend, and a MySQL database.
 
----
+The app supports role-based project workspaces, shared task status, multi-assignee tasks, due dates, task activity logs, comments, and optional checklist/subtasks for splitting work between collaborators.
 
-## 🌟 Key Features
+## Key Features
 
-1. **🔒 Secure Authentication & Authorization**
-   - User sign-up and password hashing using `bcryptjs`.
-   - Session authentication powered by **JWT (JSON Web Tokens)**.
-   - Profile verification middleware protecting all backend workspace resources.
+### Authentication and Authorization
 
-2. **📁 Project Space CRUD**
-   - Create, update, and delete distinct project workspaces.
-   - List and switch between projects instantaneously via the dashboard selector.
-   - Team leadership is supported via backend teams and membership assignment.
-   - Project creation is restricted to team leaders and admins.
+- User registration and login with hashed passwords using `bcryptjs`.
+- JWT-based authentication.
+- Protected API routes through backend auth middleware.
+- Role-aware access for admins, team leaders, and members.
 
-3. **📊 Dynamic Kanban Board with Custom Drag-and-Drop**
-   - Organizes project tasks into visual lanes: **Todo**, **In Progress**, and **Done**.
-   - Custom **HTML5 Drag-and-Drop** implementation using native React handlers (`onDragStart`, `onDragOver`, `onDrop`) for extremely smooth and lightweight drag actions.
-   - Task CRUD: Assign tasks to one or more project members, write notes, and edit details via dynamic modular dialog overlays built with **shadcn/ui**.
+### Projects and Teams
 
-4. **👥 Admin User & Team Management**
-   - Admin users can create and manage system accounts directly from the dashboard via the dedicated admin console.
-   - Role-based access control ensures only admins and team leaders can create projects and tasks.
-   - Team leaders can create teams and assign members; admins can manage any team or user.
-   - Admins can open the dedicated admin page at `/admin` to manage users and team membership.
+- Create, update, delete, and switch between project workspaces.
+- Admins and team leaders can create projects.
+- Admins can manage users, teams, leaders, and team membership from `/admin`.
+- Members can access projects where they are the owner or assigned to at least one task.
 
-5. **�📜 Global Activity Feed & Filters Page**
-   - A dedicated **Activity Feed** page `/activity` showing all change logs globally.
-   - Features a search input to search logs by task title, operator name, or remark content.
-   - Features a project filter dropdown to restrict results to a single project.
-   - Supports dynamic inline editing of log remarks using a popup interface.
+### Kanban Board
 
-6. **⚡ 1-Click Database Setup & Seeding (Evaluator Friendly)**
-   - Features an automated initialization API endpoint (`/api/db/init`) with an optional `?reset=true` parameter.
-   - **Interactive Control Panel**: We built this directly into the login screen! Anyone reviewing your application can click **"Reset & Seed Demo"** to automatically compile the SQL schemas and insert a premium mockup environment with pre-defined users, projects, tasks, and historical logs.
+- Tasks are grouped into `Todo`, `In Progress`, and `Done`.
+- Tasks can include an optional due date shown on cards and in the task details view.
+- Drag-and-drop moves tasks between columns.
+- Moving a task records a status-change activity log with an optional remark.
+- Task status is shared per task, not per assignee. If John and Jane share one task, moving it to `In Progress` moves the shared task for both.
 
----
+### Task Collaboration
 
-## 🛠️ Technology Stack
+- Tasks can be assigned to multiple users.
+- When a task first moves to `In Progress`, the app records who started it and displays `Started by <username>`.
+- Clicking a task card opens a task details view.
+- The task details view contains:
+  - Description, assignees, and due date
+  - Started-by indicator
+  - Comments
+  - Checklist/subtasks with optional individual owners
+  - Subtask completion toggles
+- Clicking the pencil icon opens the edit task dialog for task metadata only: title, description, assignees, status, due date, and remark.
 
-- **Frontend**: Next.js (App Router, Tailwind CSS v4, Axios, Lucide Icons)
-- **Backend**: Node.js & Express (ESM structure, JWT, Bcrypt, MySQL2)
-- **Database**: MySQL (Relational Schema with Cascading Deletions)
+### Activity Logs
 
----
+- Task creation, status changes, detail edits, comments, and subtask changes are recorded in `change_logs`.
+- The dashboard shows a project activity sidebar.
+- `/activity` provides a global activity feed with search and project filtering.
+- Admins can see global logs; non-admin users can see logs for projects/tasks they can access.
+- Log remark owners can edit their own remarks.
 
-## 🚀 Instructions to Run Locally
+### Database Setup and Demo Data
+
+- `/api/db/init` initializes the database and creates the core schema.
+- `/api/db/init?reset=true` resets and seeds demo users, teams, projects, tasks, and activity logs.
+- In the login screen, `Create Tables` runs `/api/db/init` and preserves existing data.
+- In the login screen, `Load Demo Data` runs `/api/db/init?reset=true`, clears existing app tables, and loads the demo workspace.
+- The backend also runs a startup migration that ensures collaboration tables exist:
+  - `task_assignees`
+  - `task_comments`
+  - `task_subtasks`
+  - `tasks.started_by`
+  - `tasks.due_date`
+
+## Technology Stack
+
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, Lucide Icons, shadcn-style UI components
+- Backend: Node.js, Express, ESM modules, JWT, bcryptjs, MySQL2
+- Database: MySQL
+
+## Run Locally
 
 ### Prerequisites
 
-Make sure you have **Node.js (v18+)** and a local **MySQL Server** installed and running on your machine.
+- Node.js 18 or newer
+- MySQL server running locally
 
----
+### 1. Configure and Start the Backend
 
-### Step 1: Configure & Start the Backend
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. The dependencies are already configured in `package.json`. If you want to perform a fresh install:
-   ```bash
-   npm install
-   ```
-3. Open `backend/.env` and review the database variables. By default, it connects to:
-   - Host: `127.0.0.1` (localhost)
-   - Port: `3306`
-   - User: `root`
-   - Password: `""` (empty)
-   - Database: `project_management`
-     _(Update these credentials if your local MySQL instance has a custom password or port)._
-4. Start the Express server:
-   ```bash
-   npm start
-   ```
-   _The server will start listening on **`http://localhost:5000`**._
-
----
-
-### Step 2: Start the Next.js Frontend
-
-1. Open a new terminal and navigate to the frontend folder:
-   ```bash
-   cd frontend
-   ```
-2. The dependencies (`axios`, `lucide-react`, etc.) are pre-configured. If you want to perform a fresh install:
-   ```bash
-   npm install
-   ```
-3. Start the Next.js dev server:
-   ```bash
-   npm run dev
-   ```
-   _The frontend application will start running on **`http://localhost:3000`**._
-
----
-
-### Step 3: Initialize the Database (One-Click)
-
-1. Open your browser and navigate to **`http://localhost:3000`** (which redirects to `/login`).
-2. Inside the **Evaluator Quick Setup** card, click **"Reset & Seed Demo"**.
-3. The application will programmatically connect to your local MySQL instance, compile the database `project_management` and its tables, and seed it with realistic test mockups.
-4. The panel will display success indicators and reveal the demo account credentials.
-
----
-
-## 🔑 Predefined Demo Accounts
-
-Once seeded, you can log in immediately using these pre-registered users (all share the same password):
-
-- **John Doe** (Admin/Lead) — Username: `john_doe` | Password: `password123`
-- **Jane Smith** (Developer) — Username: `jane_smith` | Password: `password123`
-- **Bob Johnson** (Tester) — Username: `bob_johnson` | Password: `password123`
-
-> The admin account can additionally create new system users from the dashboard using the **Manage Users** button in the top-right header.
-
----
-
-## ⚠️ Known Issues / Incomplete Functionality
-
-- The drag-and-drop move remark dialog is working, but the UX may still feel slightly delayed on very large task lists.
-- The app assumes a local MySQL server with default credentials; additional environment configuration may be required for non-standard setups.
-
----
-
-## 📋 Relational Database Schema
-
-```sql
--- Users Table
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(255) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Projects Table
-CREATE TABLE projects (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  user_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Tasks Table
-CREATE TABLE tasks (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  project_id INT NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  status ENUM('Todo', 'In Progress', 'Done') DEFAULT 'Todo',
-  assigned_to INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
-);
-
--- Task Assignees Join Table (many-to-many task assignment)
-CREATE TABLE task_assignees (
-  task_id INT NOT NULL,
-  user_id INT NOT NULL,
-  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (task_id, user_id),
-  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Change Logs Table
-CREATE TABLE change_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  task_id INT NOT NULL,
-  user_id INT NOT NULL,
-  old_status ENUM('Todo', 'In Progress', 'Done') NOT NULL,
-  new_status ENUM('Todo', 'In Progress', 'Done') NOT NULL,
-  remark TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+```bash
+cd backend
+npm install
+npm start
 ```
 
----
+The backend runs on:
 
-## 🏆 Development Adherence
+```text
+http://localhost:5000
+```
 
-This application fulfills all constraints listed in the Developer Assessment requirements:
+Review `backend/.env` before starting. The default expected MySQL setup is:
 
-- **Authentication**: Fully implemented Register/Login/Me flow using bcrypt & JWT session tokens, with admin/member-aware authorization checks and team leader membership awareness.
-- **Projects**: Visual creation, updates, and cascading deletion. New project/task creation is limited to team leaders and admins.
-- **Tasks**: Lanes for Todo, In Progress, Done, with instant drag-and-drop state syncing.
-- **Change Log**: Real-time auditing of creations, edits, and lane transfers mapped directly to user activity, featuring status-change remarks.
-- **Predefined Seeding Endpoint**: Exposed at `/api/db/init` and triggerable via one-click in the frontend UI.
-- **Code Quality**: Highly structured folder organization (MVC structure in backend, modular components in frontend) utilizing ESM modules, full TypeScript integrations, **shadcn/ui** components, and Tailwind styling.
-- **Enhancements (Creativity)**: Built a dedicated Global Activity Feed and filters page (`/activity`) allowing audit trail queries, search, and inline remark updates.
+```text
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=project_management
+```
+
+Update these values if your local MySQL server uses different credentials.
+
+### 2. Start the Frontend
+
+Open a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend runs on:
+
+```text
+http://localhost:3000
+```
+
+### 3. Initialize the Database
+
+Open the app in the browser and go to:
+
+```text
+http://localhost:3000
+```
+
+From the login screen, use one of the database setup buttons:
+
+- `Create Tables`: creates or updates the database tables without deleting existing data.
+- `Load Demo Data`: resets the app tables and loads sample users, teams, projects, tasks, and logs.
+
+You can also call the API directly:
+
+```text
+GET http://localhost:5000/api/db/init?reset=true
+```
+
+## Demo Accounts
+
+After seeding, all demo accounts use:
+
+```text
+password123
+```
+
+Available seeded users include:
+
+| Name | Username | Role |
+| --- | --- | --- |
+| John Doe | `john_doe` | admin |
+| Alice Lead | `alice_lead` | leader |
+| Mike Lead | `mike_lead` | leader |
+| Jane Smith | `jane_smith` | member |
+| Bob Johnson | `bob_johnson` | member |
+| Lisa Green | `lisa_green` | member |
+| Tom Adams | `tom_adams` | member |
+| Sam Wilson | `sam_wilson` | member |
+
+## Current Task Workflow
+
+1. Admins or team leaders create projects and tasks.
+2. A task can have one or more assignees.
+3. A task can optionally include a due date.
+4. Any authorized assignee, project owner, or admin can update the task.
+5. Dragging a task between columns updates the shared task status.
+6. Moving a task to `In Progress` records the first starter in `started_by`.
+7. Users open the task details view to discuss work through comments or split work through checklist items.
+8. Checklist items can be assigned to individual users and completed independently.
+
+## Database Schema Overview
+
+The app uses these main tables:
+
+- `users`
+- `teams`
+- `team_members`
+- `projects`
+- `tasks`
+- `task_assignees`
+- `task_comments`
+- `task_subtasks`
+- `change_logs`
+
+Core relationship summary:
+
+- A project belongs to one owner user.
+- A task belongs to one project.
+- A task can have many assignees through `task_assignees`.
+- A task can have many comments through `task_comments`.
+- A task can have many checklist items through `task_subtasks`.
+- A task can record one `started_by` user.
+- A task can have an optional `due_date`.
+- Change logs belong to tasks and users.
+
+## Useful Scripts
+
+Backend:
+
+```bash
+cd backend
+npm start
+npm run server
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
+
+## Verification Notes
+
+- `npm run build` in `frontend` currently passes.
+- `npm run lint` may still report pre-existing lint issues in older files, mostly strict TypeScript `any` usage and React hook lint rules.
+- Next.js may warn about multiple lockfiles if a parent `package-lock.json` exists outside this repository.
+
+## Known Issues / Incomplete Functionality
+
+- The app assumes a local MySQL instance unless `.env` is changed.
+- `Started by` currently records the first user who moved the task to `In Progress`. It is an audit-style indicator, not a live "currently working" lock.
+- Comments and checklist/subtasks live in the task details view. The edit dialog is intentionally limited to task metadata.

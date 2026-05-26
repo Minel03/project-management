@@ -19,6 +19,8 @@ export async function initDatabase(req, res) {
       console.log('Reset parameter is true. Dropping existing tables...');
       await pool.query('SET FOREIGN_KEY_CHECKS = 0');
       await pool.query('DROP TABLE IF EXISTS change_logs');
+      await pool.query('DROP TABLE IF EXISTS task_comments');
+      await pool.query('DROP TABLE IF EXISTS task_subtasks');
       await pool.query('DROP TABLE IF EXISTS task_assignees');
       await pool.query('DROP TABLE IF EXISTS tasks');
       await pool.query('DROP TABLE IF EXISTS projects');
@@ -74,10 +76,13 @@ export async function initDatabase(req, res) {
         description TEXT,
         status ENUM('Todo', 'In Progress', 'Done') DEFAULT 'Todo',
         assigned_to INT DEFAULT NULL,
+        started_by INT DEFAULT NULL,
+        due_date DATE DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (started_by) REFERENCES users(id) ON DELETE SET NULL
       )`,
       // Task assignees join table
       `CREATE TABLE IF NOT EXISTS task_assignees (
@@ -87,6 +92,30 @@ export async function initDatabase(req, res) {
         PRIMARY KEY (task_id, user_id),
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`,
+      // Task comments table
+      `CREATE TABLE IF NOT EXISTS task_comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        user_id INT NOT NULL,
+        comment TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`,
+      // Task subtasks/checklist table
+      `CREATE TABLE IF NOT EXISTS task_subtasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        assigned_to INT NULL,
+        is_done BOOLEAN NOT NULL DEFAULT FALSE,
+        created_by INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       )`,
       // Change logs table
       `CREATE TABLE IF NOT EXISTS change_logs (
@@ -120,6 +149,24 @@ export async function initDatabase(req, res) {
       );
     }
 
+    const [startedByColumn] = await pool.query(
+      'SHOW COLUMNS FROM tasks LIKE ?',
+      ['started_by'],
+    );
+    if (startedByColumn.length === 0) {
+      await pool.query('ALTER TABLE tasks ADD COLUMN started_by INT NULL');
+      await pool.query(
+        'ALTER TABLE tasks ADD CONSTRAINT fk_tasks_started_by_init FOREIGN KEY (started_by) REFERENCES users(id) ON DELETE SET NULL',
+      );
+    }
+
+    const [dueDateColumn] = await pool.query('SHOW COLUMNS FROM tasks LIKE ?', [
+      'due_date',
+    ]);
+    if (dueDateColumn.length === 0) {
+      await pool.query('ALTER TABLE tasks ADD COLUMN due_date DATE NULL');
+    }
+
     // If task_assignees exists but is empty, migrate any legacy assigned_to values
     const [taskAssigneesTable] = await pool.query(
       "SHOW TABLES LIKE 'task_assignees'",
@@ -145,6 +192,9 @@ export async function initDatabase(req, res) {
       // Disable foreign key checks to safely truncate
       await pool.query('SET FOREIGN_KEY_CHECKS = 0');
       await pool.query('TRUNCATE TABLE change_logs');
+      await pool.query('TRUNCATE TABLE task_comments');
+      await pool.query('TRUNCATE TABLE task_subtasks');
+      await pool.query('TRUNCATE TABLE task_assignees');
       await pool.query('TRUNCATE TABLE tasks');
       await pool.query('TRUNCATE TABLE projects');
       await pool.query('TRUNCATE TABLE team_members');
@@ -242,6 +292,7 @@ export async function initDatabase(req, res) {
           'Create Figma wireframes and high-fidelity mockups for key pages.',
           'Done',
           userIds[1],
+          '2026-05-20',
         ],
         [
           projectIds[0],
@@ -249,6 +300,7 @@ export async function initDatabase(req, res) {
           'Create express endpoint structures and configure DB pool connection.',
           'In Progress',
           userIds[3],
+          '2026-05-30',
         ],
         [
           projectIds[0],
@@ -256,6 +308,7 @@ export async function initDatabase(req, res) {
           'Configure Jest/Supertest suite for all endpoints.',
           'Todo',
           null,
+          '2026-06-05',
         ],
         // Seed Tasks for Project 2 (Mobile App)
         [
@@ -264,6 +317,7 @@ export async function initDatabase(req, res) {
           'Setup APNS and FCM services with token storage.',
           'Todo',
           userIds[2],
+          '2026-06-08',
         ],
         [
           projectIds[1],
@@ -271,13 +325,14 @@ export async function initDatabase(req, res) {
           'Implement signup, login screens and localstorage token handling.',
           'Done',
           userIds[5],
+          '2026-05-24',
         ],
       ];
 
       const taskIds = [];
       for (const tskData of tasksData) {
         const [result] = await pool.query(
-          'INSERT INTO tasks (project_id, title, description, status, assigned_to) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO tasks (project_id, title, description, status, assigned_to, due_date) VALUES (?, ?, ?, ?, ?, ?)',
           tskData,
         );
         taskIds.push(result.insertId);

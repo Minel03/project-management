@@ -75,10 +75,10 @@ export default function LoginPage() {
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Evaluator Setup</span>
+            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Database Setup</span>
           </div>
           <p className="text-xs text-zinc-500 leading-relaxed">
-            Initialize the MySQL database schema and seed demo data.
+            Prepare the database tables or rebuild a fresh demo workspace.
           </p>
           <div className="flex gap-2">
             <button
@@ -86,14 +86,14 @@ export default function LoginPage() {
               disabled={isDbInitializing}
               className="flex-1 py-1.5 px-3 rounded-md text-xs font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              {isDbInitializing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Init Schema'}
+              {isDbInitializing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Create Tables'}
             </button>
             <button
               onClick={() => handleDbInit(true)}
               disabled={isDbInitializing}
               className="flex-1 py-1.5 px-3 rounded-md text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              {isDbInitializing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Reset & Seed'}
+              {isDbInitializing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Load Demo Data'}
             </button>
           </div>
 

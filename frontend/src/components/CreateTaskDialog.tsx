@@ -30,6 +30,7 @@ interface CreateTaskDialogProps {
     description: string,
     assigneeIds: number[],
     status: 'Todo' | 'In Progress' | 'Done',
+    dueDate: string | null,
   ) => Promise<void>;
 }
 
@@ -43,6 +44,7 @@ export function CreateTaskDialog({
   const [description, setDescription] = useState('');
   const [assignees, setAssignees] = useState<SelectOption[]>([]);
   const [status, setStatus] = useState<'Todo' | 'In Progress' | 'Done'>('Todo');
+  const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const assigneeOptions = members.map((m) => ({
@@ -100,7 +102,7 @@ export function CreateTaskDialog({
   };
 
   const handleAssigneeChange = (selected: MultiValue<SelectOption>) => {
-    setAssignees(selected ?? []);
+    setAssignees(Array.from(selected ?? []));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,11 +115,13 @@ export function CreateTaskDialog({
         description,
         assignees.map((option) => parseInt(option.value, 10)).filter(Boolean),
         status,
+        dueDate || null,
       );
       setTitle('');
       setDescription('');
       setAssignees([]);
       setStatus('Todo');
+      setDueDate('');
       onClose();
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -204,6 +208,17 @@ export function CreateTaskDialog({
                 <option value='Done'>Done</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+              Due Date
+            </label>
+            <Input
+              type='date'
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+            />
           </div>
           <Button
             type='submit'

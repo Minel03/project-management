@@ -26,6 +26,7 @@ import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
+import { TaskViewDialog } from '@/components/TaskViewDialog';
 import {
   Dialog,
   DialogContent,
@@ -52,9 +53,32 @@ interface Task {
   status: 'Todo' | 'In Progress' | 'Done';
   assigned_to: number | null;
   assignee_name: string | null;
+  started_by: number | null;
+  started_by_name: string | null;
+  due_date: string | null;
   assignees?: { id: number; username: string }[];
+  comments?: TaskComment[];
+  subtasks?: Subtask[];
   created_at: string;
   updated_at: string;
+}
+
+interface TaskComment {
+  id: number;
+  task_id: number;
+  user_id: number;
+  username: string;
+  comment: string;
+  created_at: string;
+}
+
+interface Subtask {
+  id: number;
+  task_id: number;
+  title: string;
+  assigned_to: number | null;
+  assignee_name: string | null;
+  is_done: boolean | number;
 }
 
 interface Member {
@@ -109,6 +133,7 @@ export default function DashboardPage() {
   // Modals Open State
   const [isProjModalOpen, setIsProjModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isViewTaskOpen, setIsViewTaskOpen] = useState(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [isEditProjOpen, setIsEditProjOpen] = useState(false);
 
@@ -269,6 +294,7 @@ export default function DashboardPage() {
     description: string,
     assigneeIds: number[],
     status: 'Todo' | 'In Progress' | 'Done',
+    dueDate: string | null,
   ) => {
     if (!activeProject) return;
     try {
@@ -277,6 +303,7 @@ export default function DashboardPage() {
         description,
         status,
         assignedTo: assigneeIds,
+        dueDate,
       });
 
       if (res.data.success) {
@@ -294,6 +321,20 @@ export default function DashboardPage() {
     setIsEditTaskOpen(true);
   };
 
+  const handleOpenViewTask = (task: Task) => {
+    setActiveTask(task);
+    setIsViewTaskOpen(true);
+  };
+
+  const replaceTask = (updatedTask: Task) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+    );
+    setActiveTask((currentTask) =>
+      currentTask?.id === updatedTask.id ? updatedTask : currentTask,
+    );
+  };
+
   const handleUpdateTask = async (
     taskId: number,
     fields: {
@@ -301,6 +342,7 @@ export default function DashboardPage() {
       description: string;
       status: 'Todo' | 'In Progress' | 'Done';
       assignedTo: number[] | null;
+      dueDate: string | null;
       remark: string;
     },
   ) => {
@@ -308,12 +350,49 @@ export default function DashboardPage() {
       const res = await api.put(`/api/tasks/${taskId}`, fields);
       if (res.data.success) {
         const updatedTask = res.data.data;
-        setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+        replaceTask(updatedTask);
         refreshLogs();
       }
     } catch (err) {
       console.error('Update task failed:', err);
       throw err;
+    }
+  };
+
+  const handleAddTaskComment = async (taskId: number, comment: string) => {
+    const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
+    }
+  };
+
+  const handleAddSubtask = async (
+    taskId: number,
+    title: string,
+    assignedTo: number | null,
+  ) => {
+    const res = await api.post(`/api/tasks/${taskId}/subtasks`, {
+      title,
+      assignedTo,
+    });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
+    }
+  };
+
+  const handleToggleSubtask = async (
+    taskId: number,
+    subtaskId: number,
+    isDone: boolean,
+  ) => {
+    const res = await api.patch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
+      isDone,
+    });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
     }
   };
 
@@ -404,6 +483,15 @@ export default function DashboardPage() {
 
   const getTasksByStatus = (status: 'Todo' | 'In Progress' | 'Done') => {
     return tasks.filter((t) => t.status === status);
+  };
+
+  const canEditTask = (task: Task) => {
+    if (canManageWorkspace) return true;
+    if (!user) return false;
+    return (
+      task.assigned_to === user.id ||
+      Boolean(task.assignees?.some((assignee) => assignee.id === user.id))
+    );
   };
 
   if (authLoading) {
@@ -646,8 +734,9 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onEditTask={handleOpenEditTask}
-                          canEditTask={canManageWorkspace}
+                          onViewTask={(task) => handleOpenViewTask(task as Task)}
+                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          canEditTask={(task) => canEditTask(task as Task)}
                         />
                         <KanbanColumn
                           title='In Progress'
@@ -656,8 +745,9 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onEditTask={handleOpenEditTask}
-                          canEditTask={canManageWorkspace}
+                          onViewTask={(task) => handleOpenViewTask(task as Task)}
+                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          canEditTask={(task) => canEditTask(task as Task)}
                         />
                         <KanbanColumn
                           title='Done'
@@ -666,8 +756,9 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onEditTask={handleOpenEditTask}
-                          canEditTask={canManageWorkspace}
+                          onViewTask={(task) => handleOpenViewTask(task as Task)}
+                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          canEditTask={(task) => canEditTask(task as Task)}
                         />
                       </div>
                     )}
@@ -738,6 +829,16 @@ export default function DashboardPage() {
         task={activeTask}
         members={members}
         onSave={handleUpdateTask}
+      />
+
+      <TaskViewDialog
+        isOpen={isViewTaskOpen}
+        onClose={() => setIsViewTaskOpen(false)}
+        task={activeTask}
+        members={members}
+        onAddComment={handleAddTaskComment}
+        onAddSubtask={handleAddSubtask}
+        onToggleSubtask={handleToggleSubtask}
       />
 
       <Dialog

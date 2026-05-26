@@ -1,12 +1,35 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { cn, getInitials } from '@/lib/utils';
-import { Edit3, UserCheck, Clock } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckSquare,
+  Clock,
+  Edit3,
+  MessageSquare,
+  Play,
+  UserCheck,
+} from 'lucide-react';
+
+interface KanbanTask {
+  id: number;
+  title: string;
+  description?: string;
+  status: 'Todo' | 'In Progress' | 'Done';
+  assigned_to?: number | null;
+  due_date?: string | null;
+  assignee_name?: string | null;
+  assignees?: { id: number; username: string }[];
+  started_by_name?: string | null;
+  comments?: { id: number }[];
+  subtasks?: { id: number; is_done: boolean | number }[];
+  updated_at: string;
+}
 
 interface KanbanColumnProps {
   title: string;
   status: 'Todo' | 'In Progress' | 'Done';
-  tasks: any[];
+  tasks: KanbanTask[];
   onDragOver: (
     e: React.DragEvent<HTMLDivElement>,
     status: 'Todo' | 'In Progress' | 'Done',
@@ -16,8 +39,9 @@ interface KanbanColumnProps {
     e: React.DragEvent<HTMLDivElement>,
     status: 'Todo' | 'In Progress' | 'Done',
   ) => void;
-  onEditTask: (task: any) => void;
-  canEditTask?: boolean;
+  onViewTask: (task: KanbanTask) => void;
+  onEditTask: (task: KanbanTask) => void;
+  canEditTask?: boolean | ((task: KanbanTask) => boolean);
 }
 
 export function KanbanColumn({
@@ -27,9 +51,19 @@ export function KanbanColumn({
   onDragOver,
   onDragLeave,
   onDrop,
+  onViewTask,
   onEditTask,
   canEditTask,
 }: KanbanColumnProps) {
+  const formatDueDate = (value?: string | null) => {
+    if (!value) return null;
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <div
       onDragOver={(e) => onDragOver(e, status)}
@@ -54,21 +88,32 @@ export function KanbanColumn({
       </div>
 
       <div className='flex-1 space-y-3 overflow-y-auto'>
-        {tasks.map((task) => (
-          <Card
-            key={task.id}
-            draggable
-            onDragStart={(e) =>
-              e.dataTransfer.setData('text/plain', String(task.id))
-            }
-            className='group relative p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700/60 active:scale-[0.98] transition-all cursor-grab active:cursor-grabbing shadow-lg'>
-            {canEditTask ? (
-              <button
-                onClick={() => onEditTask(task)}
-                className='absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100 text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-all cursor-pointer'>
-                <Edit3 className='w-3.5 h-3.5' />
-              </button>
-            ) : null}
+        {tasks.map((task) => {
+          const taskCanEdit =
+            typeof canEditTask === 'function'
+              ? canEditTask(task)
+              : Boolean(canEditTask);
+
+          return (
+            <Card
+              key={task.id}
+              draggable
+              onDragStart={(e) =>
+                e.dataTransfer.setData('text/plain', String(task.id))
+              }
+              onClick={() => onViewTask(task)}
+              className='group relative p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700/60 active:scale-[0.98] transition-all cursor-pointer shadow-lg'>
+              {taskCanEdit ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditTask(task);
+                  }}
+                  className='absolute top-3 right-3 p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-all cursor-pointer'
+                  title='Edit task'>
+                  <Edit3 className='w-3.5 h-3.5' />
+                </button>
+              ) : null}
             <h4
               className='text-xs font-bold text-slate-200 mb-1 pr-6 truncate'
               style={
@@ -81,6 +126,43 @@ export function KanbanColumn({
             <p className='text-[11px] text-slate-400 line-clamp-2 mb-3'>
               {task.description || 'No description.'}
             </p>
+            {task.started_by_name ? (
+              <div className='mb-3 inline-flex max-w-full items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-950/40 px-2 py-1 text-[9px] font-semibold text-emerald-300'>
+                <Play className='h-2.5 w-2.5 shrink-0' />
+                <span className='truncate'>
+                  Started by {task.started_by_name}
+                </span>
+              </div>
+            ) : null}
+            {(task.subtasks?.length || task.comments?.length) ? (
+              <div className='mb-3 flex items-center gap-3 text-[9px] text-slate-500'>
+                {task.subtasks?.length ? (
+                  <span className='flex items-center gap-1'>
+                    <CheckSquare className='h-3 w-3' />
+                    {
+                      task.subtasks.filter(
+                        (subtask: { is_done: boolean | number }) =>
+                          Boolean(subtask.is_done),
+                      ).length
+                    }
+                    /
+                    {task.subtasks.length}
+                  </span>
+                ) : null}
+                {task.comments?.length ? (
+                  <span className='flex items-center gap-1'>
+                    <MessageSquare className='h-3 w-3' />
+                    {task.comments.length}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {task.due_date ? (
+              <div className='mb-3 flex items-center gap-1.5 text-[9px] font-semibold text-amber-300'>
+                <CalendarDays className='h-3 w-3' />
+                <span>Due {formatDueDate(task.due_date)}</span>
+              </div>
+            ) : null}
             <div className='flex items-center justify-between text-[9px] text-slate-600'>
               {task.assignees && task.assignees.length > 0 ? (
                 <div className='flex items-center gap-1.5 min-w-0'>
@@ -121,7 +203,8 @@ export function KanbanColumn({
               </span>
             </div>
           </Card>
-        ))}
+          );
+        })}
         {tasks.length === 0 && (
           <div className='h-24 border border-dashed border-slate-900 rounded-xl flex items-center justify-center'>
             <span className='text-[10px] text-slate-600'>Drop tasks here</span>

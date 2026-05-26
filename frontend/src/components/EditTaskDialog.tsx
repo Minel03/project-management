@@ -18,6 +18,9 @@ interface Task {
   status: 'Todo' | 'In Progress' | 'Done';
   assigned_to: number | null;
   assignee_name: string | null;
+  started_by: number | null;
+  started_by_name: string | null;
+  due_date: string | null;
   assignees?: { id: number; username: string }[];
   created_at: string;
   updated_at: string;
@@ -46,6 +49,7 @@ interface EditTaskDialogProps {
       description: string;
       status: 'Todo' | 'In Progress' | 'Done';
       assignedTo: number[] | null;
+      dueDate: string | null;
       remark: string;
     },
   ) => Promise<void>;
@@ -62,6 +66,7 @@ export function EditTaskDialog({
   const [description, setDescription] = useState('');
   const [assignees, setAssignees] = useState<SelectOption[]>([]);
   const [status, setStatus] = useState<'Todo' | 'In Progress' | 'Done'>('Todo');
+  const [dueDate, setDueDate] = useState('');
   const [remark, setRemark] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -120,7 +125,12 @@ export function EditTaskDialog({
   };
 
   const handleAssigneeChange = (selected: MultiValue<SelectOption>) => {
-    setAssignees(selected ?? []);
+    setAssignees(Array.from(selected ?? []));
+  };
+
+  const toDateInputValue = (value: string | null) => {
+    if (!value) return '';
+    return value.slice(0, 10);
   };
 
   useEffect(() => {
@@ -128,6 +138,7 @@ export function EditTaskDialog({
       setTitle(task.title);
       setDescription(task.description || '');
       setStatus(task.status);
+      setDueDate(toDateInputValue(task.due_date));
       const currentAssignees =
         task.assignees?.map((a) => ({
           value: String(a.id),
@@ -161,6 +172,7 @@ export function EditTaskDialog({
                 .map((option) => parseInt(option.value, 10))
                 .filter(Boolean)
             : [],
+        dueDate: dueDate || null,
         remark: remark.trim(),
       });
       onClose();
@@ -180,6 +192,11 @@ export function EditTaskDialog({
           <DialogTitle className='text-base font-bold text-slate-100'>
             Edit Task
           </DialogTitle>
+          {task?.started_by_name ? (
+            <p className='text-[11px] font-medium text-emerald-300'>
+              Started by {task.started_by_name}
+            </p>
+          ) : null}
         </DialogHeader>
         <form
           onSubmit={handleSubmit}
@@ -195,6 +212,17 @@ export function EditTaskDialog({
               placeholder='Task title'
               className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
               required
+            />
+          </div>
+          <div>
+            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+              Due Date
+            </label>
+            <Input
+              type='date'
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
             />
           </div>
           <div>
