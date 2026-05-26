@@ -118,13 +118,6 @@ export async function createLog(req, res) {
 // @access  Private
 export async function updateLog(req, res) {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can update activity logs',
-      });
-    }
-
     const logId = req.params.id || req.body.change_log_id;
     const { old_status, new_status, remark } = req.body;
 
@@ -148,11 +141,19 @@ export async function updateLog(req, res) {
     }
 
     const currentLog = existing[0];
+    if (req.user.id !== currentLog.user_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the remark owner can edit this log entry',
+      });
+    }
+
     const updatedOldStatus =
       old_status !== undefined ? old_status : currentLog.old_status;
     const updatedNewStatus =
       new_status !== undefined ? new_status : currentLog.new_status;
     const updatedRemark = remark !== undefined ? remark : currentLog.remark;
+    const remarkChanged = remark !== undefined && remark !== currentLog.remark;
 
     await pool.query(
       'UPDATE change_logs SET old_status = ?, new_status = ?, remark = ? WHERE id = ?',
@@ -164,9 +165,30 @@ export async function updateLog(req, res) {
       [logId],
     );
 
+    let auditEntry = null;
+    if (remarkChanged) {
+      const auditRemark = `Remark edited from "${currentLog.remark || ''}" to "${updatedRemark}"`;
+      const [insertResult] = await pool.query(
+        'INSERT INTO change_logs (task_id, user_id, old_status, new_status, remark) VALUES (?, ?, ?, ?, ?)',
+        [
+          currentLog.task_id,
+          req.user.id,
+          currentLog.new_status,
+          currentLog.new_status,
+          auditRemark,
+        ],
+      );
+      const [insertedLog] = await pool.query(
+        'SELECT cl.*, u.username as operator_username FROM change_logs cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?',
+        [insertResult.insertId],
+      );
+      auditEntry = { ...insertedLog[0], isAudit: true };
+    }
+
     return res.status(200).json({
       success: true,
       data: updatedLog[0],
+      audit: auditEntry,
     });
   } catch (error) {
     console.error('Update log error:', error);

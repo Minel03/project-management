@@ -22,13 +22,20 @@ export async function createTeam(req, res) {
     const teamLeaderId =
       req.user.role === 'admin' && leaderId ? leaderId : userId;
 
-    const [leaderRows] = await pool.query('SELECT id FROM users WHERE id = ?', [
-      teamLeaderId,
-    ]);
+    const [leaderRows] = await pool.query(
+      'SELECT id, role FROM users WHERE id = ?',
+      [teamLeaderId],
+    );
     if (leaderRows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Specified leader user not found',
+      });
+    }
+    if (leaderRows[0].role !== 'leader') {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected team leader must have the leader role',
       });
     }
 

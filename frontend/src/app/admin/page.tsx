@@ -20,7 +20,7 @@ interface UserSummary {
   id: number;
   username: string;
   email: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'leader' | 'member';
   created_at?: string;
 }
 
@@ -48,7 +48,9 @@ export default function AdminPage() {
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'leader' | 'member'>(
+    'member',
+  );
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamLeader, setNewTeamLeader] = useState<number | null>(null);
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<number | null>(
@@ -71,6 +73,8 @@ export default function AdminPage() {
       loadAdminData();
     }
   }, [authLoading, user, router]);
+
+  const leaderCandidates = users.filter((account) => account.role === 'leader');
 
   const loadAdminData = async () => {
     setError(null);
@@ -110,6 +114,14 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Failed to load team details:', err);
     }
+  };
+
+  const handleTeamToggle = async (teamId: number) => {
+    if (selectedTeam?.id === teamId) {
+      setSelectedTeam(null);
+      return;
+    }
+    await loadTeamDetails(teamId);
   };
 
   const handleCreateUser = async () => {
@@ -155,9 +167,16 @@ export default function AdminPage() {
 
     try {
       setSaving(true);
+      if (!newTeamLeader) {
+        setError(
+          'Select a leader with the leader role before creating a team.',
+        );
+        return;
+      }
+
       const res = await api.post('/api/teams', {
         name: newTeamName.trim(),
-        leaderId: newTeamLeader || user?.id,
+        leaderId: newTeamLeader,
       });
       if (res.data.success) {
         setTeams([res.data.data, ...teams]);
@@ -174,7 +193,7 @@ export default function AdminPage() {
 
   const handleUpdateUserRole = async (
     userId: number,
-    role: 'admin' | 'member',
+    role: 'admin' | 'leader' | 'member',
   ) => {
     try {
       setSaving(true);
@@ -261,45 +280,47 @@ export default function AdminPage() {
   }
 
   return (
-    <div className='min-h-screen flex flex-col bg-zinc-950 text-slate-100'>
-      <header className='sticky top-0 z-20 shrink-0 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
+    <div className='min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans'>
+      <header className='sticky top-0 z-20 shrink-0 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4'>
+        <div className='flex items-center gap-3'>
+          <Button
+            variant='ghost'
+            size='icon'
+            onClick={() => router.push('/')}
+            className='text-slate-400 hover:text-slate-100'>
+            <ArrowLeft className='w-4 h-4' />
+          </Button>
           <div>
-            <p className='text-xs uppercase tracking-[0.24em] text-slate-500'>
+            <h1 className='text-base font-bold tracking-tight text-slate-100'>
               Admin Console
-            </p>
-            <h1 className='text-xl font-semibold text-slate-100'>
-              System users & teams
             </h1>
+            <p className='text-[10px] text-slate-500'>
+              Manage system users, teams, and access levels.
+            </p>
           </div>
         </div>
 
         <div className='flex flex-wrap items-center gap-3'>
           <div className='rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm text-slate-300'>
-            <span className='font-semibold'>Signed in as</span> {user.username}
+            <span className='font-semibold text-slate-100'>Signed in as</span>{' '}
+            {user.username}
           </div>
           <button
-            onClick={() => router.push('/')}
-            className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-indigo-500/30 text-slate-400 hover:text-indigo-400 bg-slate-950/60 hover:bg-indigo-950/10 transition-all flex items-center gap-1.5 text-xs font-medium'>
-            <ArrowLeft className='w-4 h-4' />
-            Back to dashboard
-          </button>
-          <button
             onClick={logout}
-            className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 bg-slate-950/60 hover:bg-rose-950/10 transition-all flex items-center gap-1.5 text-xs font-medium'>
+            className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 bg-slate-950/60 hover:bg-rose-950/10 transition-all text-xs font-medium'>
             Log out
           </button>
         </div>
       </header>
 
-      <main className='flex-1 mx-auto w-full max-w-7xl space-y-6 px-6 py-6'>
+      <main className='flex-1 max-w-4xl w-full mx-auto p-6 space-y-6'>
         {error && (
           <div className='rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200'>
             {error}
           </div>
         )}
 
-        <section className='grid gap-6 xl:grid-cols-[1.2fr_1fr]'>
+        <section className='grid gap-6'>
           <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
             <div className='flex items-center gap-3 mb-5'>
               <ShieldCheck className='w-5 h-5 text-emerald-400' />
@@ -348,10 +369,13 @@ export default function AdminPage() {
                 <select
                   value={newUserRole}
                   onChange={(e) =>
-                    setNewUserRole(e.target.value as 'admin' | 'member')
+                    setNewUserRole(
+                      e.target.value as 'admin' | 'leader' | 'member',
+                    )
                   }
                   className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                   <option value='member'>Member</option>
+                  <option value='leader'>Leader</option>
                   <option value='admin'>Admin</option>
                 </select>
               </label>
@@ -391,21 +415,23 @@ export default function AdminPage() {
               <label className='grid gap-2 text-sm'>
                 <span>Team leader</span>
                 <select
-                  value={newTeamLeader ?? user.id}
+                  value={newTeamLeader ?? ''}
                   onChange={(e) =>
                     setNewTeamLeader(parseInt(e.target.value, 10))
                   }
                   className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
-                  <option value={user.id}>{user.username} (self)</option>
-                  {users
-                    .filter((account) => account.id !== user.id)
-                    .map((account) => (
-                      <option
-                        key={account.id}
-                        value={account.id}>
-                        {account.username} ({account.role})
-                      </option>
-                    ))}
+                  <option
+                    value=''
+                    disabled>
+                    Select a leader
+                  </option>
+                  {leaderCandidates.map((account) => (
+                    <option
+                      key={account.id}
+                      value={account.id}>
+                      {account.username} ({account.role})
+                    </option>
+                  ))}
                 </select>
               </label>
               <div className='flex justify-end'>
@@ -419,7 +445,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className='grid gap-6 xl:grid-cols-[1fr_1.4fr]'>
+        <section className='grid gap-6'>
           <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
             <div className='flex items-center gap-3 mb-5'>
               <Users className='w-5 h-5 text-violet-400' />
@@ -458,11 +484,12 @@ export default function AdminPage() {
                         onChange={(e) =>
                           handleUpdateUserRole(
                             account.id,
-                            e.target.value as 'admin' | 'member',
+                            e.target.value as 'admin' | 'leader' | 'member',
                           )
                         }
                         className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                         <option value='member'>member</option>
+                        <option value='leader'>leader</option>
                         <option value='admin'>admin</option>
                       </select>
                       <Button
@@ -501,7 +528,7 @@ export default function AdminPage() {
                     <button
                       key={team.id}
                       type='button'
-                      onClick={() => loadTeamDetails(team.id)}
+                      onClick={() => handleTeamToggle(team.id)}
                       className={`w-full rounded-3xl border p-4 text-left transition-all ${
                         selectedTeam?.id === team.id
                           ? 'border-cyan-500/40 bg-cyan-500/10'

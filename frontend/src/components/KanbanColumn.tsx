@@ -17,6 +17,7 @@ interface KanbanColumnProps {
     status: 'Todo' | 'In Progress' | 'Done',
   ) => void;
   onEditTask: (task: any) => void;
+  canEditTask?: boolean;
 }
 
 export function KanbanColumn({
@@ -27,6 +28,7 @@ export function KanbanColumn({
   onDragLeave,
   onDrop,
   onEditTask,
+  canEditTask,
 }: KanbanColumnProps) {
   return (
     <div
@@ -60,11 +62,13 @@ export function KanbanColumn({
               e.dataTransfer.setData('text/plain', String(task.id))
             }
             className='group relative p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700/60 active:scale-[0.98] transition-all cursor-grab active:cursor-grabbing shadow-lg'>
-            <button
-              onClick={() => onEditTask(task)}
-              className='absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100 text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-all cursor-pointer'>
-              <Edit3 className='w-3.5 h-3.5' />
-            </button>
+            {canEditTask ? (
+              <button
+                onClick={() => onEditTask(task)}
+                className='absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100 text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-all cursor-pointer'>
+                <Edit3 className='w-3.5 h-3.5' />
+              </button>
+            ) : null}
             <h4
               className='text-xs font-bold text-slate-200 mb-1 pr-6 truncate'
               style={

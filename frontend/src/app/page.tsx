@@ -61,7 +61,7 @@ interface Member {
   id: number;
   username: string;
   email: string;
-  role?: 'admin' | 'member';
+  role?: 'admin' | 'leader' | 'member';
 }
 
 interface ChangeLog {
@@ -80,7 +80,7 @@ interface ChangeLog {
 export default function DashboardPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
-  const canCreateProjectOrTask =
+  const canManageWorkspace =
     user?.role === 'admin' || (user?.leaderOf?.length ?? 0) > 0;
 
   // Core Data State
@@ -505,26 +505,21 @@ export default function DashboardPage() {
                 <Briefcase className='w-3.5 h-3.5 text-indigo-500' />
                 <span className='font-sans'>My Projects</span>
               </div>
-              <button
-                onClick={() =>
-                  canCreateProjectOrTask && setIsProjModalOpen(true)
-                }
-                disabled={!canCreateProjectOrTask}
-                className={`p-1 rounded-md border transition-all ${canCreateProjectOrTask ? 'bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 border-indigo-500/20 cursor-pointer' : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed'}`}
-                title={
-                  canCreateProjectOrTask
-                    ? 'Create Project'
-                    : 'Only team leaders and admins can create projects'
-                }>
-                <Plus className='w-4 h-4' />
-              </button>
+              {canManageWorkspace ? (
+                <button
+                  onClick={() => setIsProjModalOpen(true)}
+                  className='p-1 rounded-md border border-indigo-500/20 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer'
+                  title='Create Project'>
+                  <Plus className='w-4 h-4' />
+                </button>
+              ) : null}
             </div>
 
             {projects.length === 0 ? (
               <div className='text-center py-8 px-4 border border-dashed border-slate-800 rounded-xl'>
                 <Folder className='w-6 h-6 text-slate-700 mx-auto mb-2' />
                 <p className='text-xs text-slate-500'>No projects yet.</p>
-                {canCreateProjectOrTask ? (
+                {canManageWorkspace ? (
                   <button
                     onClick={() => setIsProjModalOpen(true)}
                     className='mt-2.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer'>
@@ -582,24 +577,28 @@ export default function DashboardPage() {
                       <h1 className='text-xl font-bold tracking-tight text-slate-100 font-sans'>
                         {activeProject.name}
                       </h1>
-                      <div className='flex items-center gap-1'>
-                        <button
-                          onClick={() => {
-                            setEditProjName(activeProject.name);
-                            setEditProjDesc(activeProject.description || '');
-                            setIsEditProjOpen(true);
-                          }}
-                          className='p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer'
-                          title='Edit Project'>
-                          <Edit3 className='w-3.5 h-3.5' />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProject(activeProject.id)}
-                          className='p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition-colors cursor-pointer'
-                          title='Delete Project'>
-                          <Trash2 className='w-3.5 h-3.5' />
-                        </button>
-                      </div>
+                      {canManageWorkspace ? (
+                        <div className='flex items-center gap-1'>
+                          <button
+                            onClick={() => {
+                              setEditProjName(activeProject.name);
+                              setEditProjDesc(activeProject.description || '');
+                              setIsEditProjOpen(true);
+                            }}
+                            className='p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer'
+                            title='Edit Project'>
+                            <Edit3 className='w-3.5 h-3.5' />
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteProject(activeProject.id)
+                            }
+                            className='p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition-colors cursor-pointer'
+                            title='Delete Project'>
+                            <Trash2 className='w-3.5 h-3.5' />
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                     <p className='text-xs text-slate-400 mt-1 max-w-xl'>
                       {activeProject.description || 'No description provided.'}
@@ -620,20 +619,14 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {canCreateProjectOrTask ? (
+                  {canManageWorkspace ? (
                     <button
                       onClick={() => setIsTaskModalOpen(true)}
                       className='self-start sm:self-auto py-2 px-3.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-slate-100 shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
                       <Plus className='w-4 h-4' />
                       <span className='font-sans'>Create Task</span>
                     </button>
-                  ) : (
-                    <div className='self-start sm:self-auto py-2 px-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 text-xs font-medium flex items-center gap-1.5'>
-                      <span className='font-sans'>
-                        Only team leaders and admins can create tasks
-                      </span>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Dashboard grid panel */}
@@ -654,6 +647,7 @@ export default function DashboardPage() {
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
                           onEditTask={handleOpenEditTask}
+                          canEditTask={canManageWorkspace}
                         />
                         <KanbanColumn
                           title='In Progress'
@@ -663,6 +657,7 @@ export default function DashboardPage() {
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
                           onEditTask={handleOpenEditTask}
+                          canEditTask={canManageWorkspace}
                         />
                         <KanbanColumn
                           title='Done'
@@ -672,6 +667,7 @@ export default function DashboardPage() {
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
                           onEditTask={handleOpenEditTask}
+                          canEditTask={canManageWorkspace}
                         />
                       </div>
                     )}
@@ -680,6 +676,7 @@ export default function DashboardPage() {
                   {/* Change Log timeline activity sidebar */}
                   <ChangeLogSidebar
                     logs={logs}
+                    currentUserId={user?.id}
                     onEditLogRemark={handleEditLogRemark}
                   />
                 </div>
@@ -694,12 +691,18 @@ export default function DashboardPage() {
                   Select a project from the sidebar to view its Kanban board, or
                   configure a new workspace right away.
                 </p>
-                <button
-                  onClick={() => setIsProjModalOpen(true)}
-                  className='py-2 px-4 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-slate-100 shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
-                  <FolderPlus className='w-4 h-4' />
-                  <span className='font-sans'>Create First Project</span>
-                </button>
+                {canManageWorkspace ? (
+                  <button
+                    onClick={() => setIsProjModalOpen(true)}
+                    className='py-2 px-4 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-slate-100 shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
+                    <FolderPlus className='w-4 h-4' />
+                    <span className='font-sans'>Create First Project</span>
+                  </button>
+                ) : (
+                  <p className='text-xs text-slate-500 max-w-sm mt-3'>
+                    Only team leaders and admins can create the first project.
+                  </p>
+                )}
               </div>
             )}
           </main>

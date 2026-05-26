@@ -37,6 +37,7 @@ interface ChangeLog {
   task_title: string;
   project_name: string;
   operator_username: string;
+  isAudit?: boolean;
 }
 
 interface Project {
@@ -122,13 +123,17 @@ export default function ActivityPage() {
         remark: trimmedRemark,
       });
       if (res.data.success) {
-        setLogs(
-          logs.map((log) =>
+        setLogs((prevLogs) => {
+          const updatedLogs = prevLogs.map((log) =>
             log.id === editingRemarkLogId
               ? { ...log, remark: trimmedRemark }
               : log,
-          ),
-        );
+          );
+          if (res.data.audit) {
+            return [{ ...res.data.audit, isAudit: true }, ...updatedLogs];
+          }
+          return updatedLogs;
+        });
       }
       setIsRemarkModalOpen(false);
       setEditingRemarkLogId(null);
@@ -256,8 +261,13 @@ export default function ActivityPage() {
               let actionText = '';
               let badgeStyles = '';
               let showBadge = false;
+              const isAuditLog =
+                log.isAudit ||
+                (log.remark?.startsWith('Remark edited from') ?? false);
 
-              if (log.old_status === log.new_status) {
+              if (isAuditLog) {
+                actionText = 'recorded an audit event for';
+              } else if (log.old_status === log.new_status) {
                 if (
                   log.remark &&
                   log.remark.toLowerCase().includes('created')
@@ -284,9 +294,13 @@ export default function ActivityPage() {
               return (
                 <Card
                   key={log.id}
-                  className='p-4 border-slate-900 bg-slate-900/20 hover:border-slate-800/80 transition-all flex flex-col md:flex-row md:items-start justify-between gap-4'>
+                  className={`p-4 border-slate-900 transition-all flex flex-col md:flex-row md:items-start justify-between gap-4 ${
+                    isAuditLog
+                      ? 'bg-slate-900/10 border-slate-700 ring-1 ring-slate-700/30'
+                      : 'bg-slate-900/20 hover:border-slate-800/80'
+                  }`}>
                   <div className='space-y-1.5 min-w-0'>
-                    <div className='flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider'>
+                    <div className='flex flex-wrap items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase tracking-wider'>
                       <span className='text-slate-300'>
                         {log.operator_username}
                       </span>
@@ -294,6 +308,11 @@ export default function ActivityPage() {
                       <span className='text-indigo-400/80'>
                         {log.project_name}
                       </span>
+                      {isAuditLog && (
+                        <span className='rounded-full border border-slate-700 bg-slate-950/70 px-2 py-0.5 text-[9px] text-slate-300'>
+                          Audit Entry
+                        </span>
+                      )}
                     </div>
 
                     <h4 className='text-sm font-bold text-slate-100 truncate'>
@@ -325,13 +344,23 @@ export default function ActivityPage() {
                       <Clock className='w-3 h-3 text-slate-600' />
                       {formattedDate}
                     </span>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handleOpenEditRemark(log.id, log.remark)}
-                      className='border-slate-800 hover:bg-slate-900 hover:text-slate-200 text-[10px] px-2.5 py-1 h-7 cursor-pointer'>
-                      Edit Remark
-                    </Button>
+                    {!isAuditLog && user?.id === log.user_id ? (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => handleOpenEditRemark(log.id, log.remark)}
+                        className='border-slate-800 hover:bg-slate-900 hover:text-slate-200 text-[10px] px-2.5 py-1 h-7 cursor-pointer'>
+                        Edit Remark
+                      </Button>
+                    ) : isAuditLog ? (
+                      <Badge className='bg-slate-800 text-slate-300 border border-slate-700 text-[10px] uppercase px-2 py-1 rounded'>
+                        Audit Entry
+                      </Badge>
+                    ) : (
+                      <span className='text-[10px] text-slate-500 italic'>
+                        Only the remark owner can edit
+                      </span>
+                    )}
                   </div>
                 </Card>
               );

@@ -16,7 +16,7 @@ interface Member {
   id: number;
   username: string;
   email: string;
-  role?: 'admin' | 'member';
+  role?: 'admin' | 'leader' | 'member';
 }
 
 interface CreateUserDialogProps {
@@ -27,7 +27,7 @@ interface CreateUserDialogProps {
     username: string,
     email: string,
     password: string,
-    role: 'admin' | 'member',
+    role: 'admin' | 'leader' | 'member',
   ) => Promise<void>;
 }
 
@@ -40,7 +40,7 @@ export function CreateUserDialog({
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'member'>('member');
+  const [role, setRole] = useState<'admin' | 'leader' | 'member'>('member');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -121,9 +121,12 @@ export function CreateUserDialog({
             </label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as 'admin' | 'member')}
+              onChange={(e) =>
+                setRole(e.target.value as 'admin' | 'leader' | 'member')
+              }
               className='h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
               <option value='member'>Member</option>
+              <option value='leader'>Leader</option>
               <option value='admin'>Admin</option>
             </select>
           </div>

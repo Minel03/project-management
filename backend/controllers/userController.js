@@ -37,7 +37,8 @@ export async function createUser(req, res) {
       });
     }
 
-    const userRole = role === 'admin' ? 'admin' : 'member';
+    const userRole =
+      role === 'admin' ? 'admin' : role === 'leader' ? 'leader' : 'member';
 
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ? OR username = ?',
@@ -87,10 +88,10 @@ export async function updateUserRole(req, res) {
 
     const userId = req.params.id;
     const { role } = req.body;
-    if (!['admin', 'member'].includes(role)) {
+    if (!['admin', 'leader', 'member'].includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Role must be admin or member',
+        message: 'Role must be admin, leader, or member',
       });
     }
 

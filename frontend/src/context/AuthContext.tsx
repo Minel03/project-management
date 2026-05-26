@@ -15,7 +15,7 @@ interface User {
   id: number;
   username: string;
   email: string;
-  role?: 'admin' | 'member';
+  role?: 'admin' | 'leader' | 'member';
   leaderOf?: TeamSummary[];
   memberOf?: TeamSummary[];
   created_at?: string;

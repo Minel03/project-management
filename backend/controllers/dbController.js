@@ -37,7 +37,7 @@ export async function initDatabase(req, res) {
         username VARCHAR(255) NOT NULL UNIQUE,
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
-        role ENUM('admin','member') NOT NULL DEFAULT 'member',
+        role ENUM('admin','leader','member') NOT NULL DEFAULT 'member',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
       // Teams table
@@ -112,7 +112,11 @@ export async function initDatabase(req, res) {
     ]);
     if (roleColumn.length === 0) {
       await pool.query(
-        "ALTER TABLE users ADD COLUMN role ENUM('admin','member') NOT NULL DEFAULT 'member'",
+        "ALTER TABLE users ADD COLUMN role ENUM('admin','leader','member') NOT NULL DEFAULT 'member'",
+      );
+    } else if (!roleColumn[0].Type.includes("'leader'")) {
+      await pool.query(
+        "ALTER TABLE users MODIFY COLUMN role ENUM('admin','leader','member') NOT NULL DEFAULT 'member'",
       );
     }
 
@@ -154,8 +158,13 @@ export async function initDatabase(req, res) {
 
       const usersData = [
         ['john_doe', 'john@example.com', hashedPassword, 'admin'],
+        ['alice_lead', 'alice@example.com', hashedPassword, 'leader'],
+        ['mike_lead', 'mike@example.com', hashedPassword, 'leader'],
         ['jane_smith', 'jane@example.com', hashedPassword, 'member'],
         ['bob_johnson', 'bob@example.com', hashedPassword, 'member'],
+        ['lisa_green', 'lisa@example.com', hashedPassword, 'member'],
+        ['tom_adams', 'tom@example.com', hashedPassword, 'member'],
+        ['sam_wilson', 'sam@example.com', hashedPassword, 'member'],
       ];
 
       const userIds = [];
@@ -168,14 +177,38 @@ export async function initDatabase(req, res) {
       }
 
       // Seed Teams
-      const [teamResult] = await pool.query(
+      const [alphaTeamResult] = await pool.query(
         'INSERT INTO teams (name, leader_id) VALUES (?, ?)',
-        ['Alpha Squad', userIds[0]],
+        ['Alpha Squad', userIds[1]],
       );
-      const teamId = teamResult.insertId;
+      const alphaTeamId = alphaTeamResult.insertId;
       await pool.query(
         'INSERT INTO team_members (team_id, user_id) VALUES (?, ?), (?, ?), (?, ?)',
-        [teamId, userIds[0], teamId, userIds[1], teamId, userIds[2]],
+        [
+          alphaTeamId,
+          userIds[1],
+          alphaTeamId,
+          userIds[3],
+          alphaTeamId,
+          userIds[4],
+        ],
+      );
+
+      const [betaTeamResult] = await pool.query(
+        'INSERT INTO teams (name, leader_id) VALUES (?, ?)',
+        ['Beta Force', userIds[2]],
+      );
+      const betaTeamId = betaTeamResult.insertId;
+      await pool.query(
+        'INSERT INTO team_members (team_id, user_id) VALUES (?, ?), (?, ?), (?, ?)',
+        [
+          betaTeamId,
+          userIds[2],
+          betaTeamId,
+          userIds[5],
+          betaTeamId,
+          userIds[6],
+        ],
       );
 
       // Seed Projects
@@ -183,12 +216,12 @@ export async function initDatabase(req, res) {
         [
           'Website Redesign',
           'Overhaul the company marketing site for modern aesthetics and speed.',
-          userIds[0],
+          userIds[1],
         ],
         [
           'Mobile Application',
           'Develop a React Native mobile application for customer portal.',
-          userIds[1],
+          userIds[2],
         ],
       ];
 
@@ -208,14 +241,14 @@ export async function initDatabase(req, res) {
           'Design UI mockup',
           'Create Figma wireframes and high-fidelity mockups for key pages.',
           'Done',
-          userIds[0],
+          userIds[1],
         ],
         [
           projectIds[0],
           'Setup API routes',
           'Create express endpoint structures and configure DB pool connection.',
           'In Progress',
-          userIds[1],
+          userIds[3],
         ],
         [
           projectIds[0],
@@ -237,7 +270,7 @@ export async function initDatabase(req, res) {
           'Integrate authentication UI',
           'Implement signup, login screens and localstorage token handling.',
           'Done',
-          userIds[1],
+          userIds[5],
         ],
       ];
 
@@ -265,24 +298,24 @@ export async function initDatabase(req, res) {
       const logsData = [
         [
           taskIds[0],
-          userIds[0],
+          userIds[1],
           'Todo',
           'Done',
           'Completed initial design review',
         ],
         [
           taskIds[1],
-          userIds[1],
+          userIds[3],
           'Todo',
           'In Progress',
           'Began setting up routes and DB configuration',
         ],
         [
           taskIds[4],
-          userIds[1],
+          userIds[5],
           'In Progress',
           'Done',
-          'API endpoints verified and integrated',
+          'Authentication UI integrated by team member',
         ],
       ];
 

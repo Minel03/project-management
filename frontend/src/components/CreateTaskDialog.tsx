@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Select, { MultiValue } from 'react-select';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,11 @@ interface Member {
   id: number;
   username: string;
   email: string;
+}
+
+interface SelectOption {
+  value: string;
+  label: string;
 }
 
 interface CreateTaskDialogProps {
@@ -35,9 +41,67 @@ export function CreateTaskDialog({
 }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assignees, setAssignees] = useState<string[]>([]);
+  const [assignees, setAssignees] = useState<SelectOption[]>([]);
   const [status, setStatus] = useState<'Todo' | 'In Progress' | 'Done'>('Todo');
   const [submitting, setSubmitting] = useState(false);
+
+  const assigneeOptions = members.map((m) => ({
+    value: String(m.id),
+    label: m.username,
+  }));
+
+  const selectStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#0f172a',
+      borderColor: '#334155',
+      minHeight: '2.75rem',
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#6366f1',
+      },
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#0f172a',
+      zIndex: 50,
+    }),
+    option: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#334155' : '#0f172a',
+      color: state.isFocused ? '#f8fafc' : '#cbd5e1',
+      cursor: 'pointer',
+    }),
+    multiValue: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#1e293b',
+    }),
+    multiValueLabel: (provided: any) => ({
+      ...provided,
+      color: '#e2e8f0',
+      fontSize: '0.75rem',
+    }),
+    multiValueRemove: (provided: any) => ({
+      ...provided,
+      color: '#94a3b8',
+      ':hover': {
+        backgroundColor: '#475569',
+        color: '#f8fafc',
+      },
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: '#94a3b8',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: '#f8fafc',
+    }),
+  };
+
+  const handleAssigneeChange = (selected: MultiValue<SelectOption>) => {
+    setAssignees(selected ?? []);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +111,7 @@ export function CreateTaskDialog({
       await onCreate(
         title,
         description,
-        assignees.map((id) => parseInt(id, 10)).filter(Boolean),
+        assignees.map((option) => parseInt(option.value, 10)).filter(Boolean),
         status,
       );
       setTitle('');
@@ -105,27 +169,27 @@ export function CreateTaskDialog({
               <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
                 Assignees
               </label>
-              <select
-                multiple
-                size={4}
+              <Select
+                isMulti
+                options={assigneeOptions}
                 value={assignees}
-                onChange={(e) =>
-                  setAssignees(
-                    Array.from(
-                      e.target.selectedOptions,
-                      (option) => option.value,
-                    ),
-                  )
-                }
-                className='w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-300 transition-colors'>
-                {members.map((m) => (
-                  <option
-                    key={m.id}
-                    value={String(m.id)}>
-                    {m.username}
-                  </option>
-                ))}
-              </select>
+                onChange={handleAssigneeChange}
+                placeholder='Select assignees...'
+                styles={selectStyles}
+                className='react-select-container text-xs'
+                classNamePrefix='react-select'
+                theme={(theme) => ({
+                  ...theme,
+                  borderRadius: 12,
+                  colors: {
+                    ...theme.colors,
+                    primary25: '#334155',
+                    primary: '#6366f1',
+                    neutral0: '#0f172a',
+                    neutral80: '#cbd5e1',
+                  },
+                })}
+              />
             </div>
             <div>
               <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
