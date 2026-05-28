@@ -4,25 +4,21 @@ import {
   createProject,
   getProjectById,
   updateProject,
-  deleteProject
+  deleteProject,
 } from '../controllers/projectController.js';
 import { createTask } from '../controllers/taskController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.get('/', protect, getProjects);
+router.post('/', protect, createProject);
 
-router.route('/')
-  .get(getProjects)
-  .post(createProject);
-
-router.route('/:id')
-  .get(getProjectById)
-  .put(updateProject)
-  .delete(deleteProject);
+router.get('/:id', protect, getProjectById);
+router.put('/:id', protect, updateProject);
+router.delete('/:id', protect, deleteProject);
 
 // Mount task creation under projects
-router.post('/:projectId/tasks', createTask);
+router.post('/:projectId/tasks', protect, createTask);
 
 export default router;

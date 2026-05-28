@@ -9,18 +9,12 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.put('/:id', protect, updateTask);
 
-router.route('/:id')
-  .put(updateTask);
+router.post('/:id/comments', protect, addTaskComment);
 
-router.route('/:id/comments')
-  .post(addTaskComment);
+router.post('/:id/subtasks', protect, addTaskSubtask);
 
-router.route('/:id/subtasks')
-  .post(addTaskSubtask);
-
-router.route('/:taskId/subtasks/:subtaskId')
-  .patch(updateTaskSubtask);
+router.patch('/:taskId/subtasks/:subtaskId', protect, updateTaskSubtask);
 
 export default router;

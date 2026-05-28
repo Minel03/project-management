@@ -4,14 +4,10 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.get('/', protect, getLogs);
+router.post('/', protect, createLog);
+router.patch('/', protect, updateLog);
 
-router.route('/')
-  .get(getLogs)
-  .post(createLog)
-  .patch(updateLog);
-
-router.route('/:id')
-  .patch(updateLog);
+router.patch('/:id', protect, updateLog);
 
 export default router;

@@ -62,6 +62,35 @@ The app supports role-based project workspaces, shared task status, multi-assign
   - `tasks.started_by`
   - `tasks.due_date`
 
+**Security note (demo only)**
+
+- The `/api/db/init` endpoint and the login-screen DB buttons are provided for demo and assessment convenience. In production this endpoint should be restricted — do not leave it publicly accessible.
+- Recommended: protect the endpoint with authentication and an admin-only check (for example `protect()` + `isAdmin()` middleware). You can also hide the UI buttons in production builds.
+- This repository seeds an admin account during demo initialization so reviewers can authenticate and run the init/seed endpoints safely. Use the seeded admin (`john_doe`) or your own admin user before calling the endpoint.
+
+Example curl (run as admin with a JWT):
+
+```bash
+curl -X GET "http://localhost:5000/api/db/init?reset=true" \
+  -H "Authorization: Bearer <ADMIN_JWT>"
+```
+
+If you prefer not to expose the init endpoint, run the SQL in `backend/controllers/dbController.js` manually or convert it to a migration/seed script (recommended for production deployments).
+
+### Deployment environment variables (recommended)
+
+Two env vars control the demo DB init feature and should be set appropriately when deploying (for example on Vercel):
+
+- `ENABLE_DB_INIT` (backend): when set to `true` the `/api/db/init` route is mounted. Default should be `false` in production.
+- `NEXT_PUBLIC_ENABLE_DB_INIT` (frontend): when set to `true` the login UI shows the `Create Tables` / `Load Demo Data` buttons. Keep this `false` in production.
+
+Recommended Vercel settings for production:
+
+- `ENABLE_DB_INIT=false`
+- `NEXT_PUBLIC_ENABLE_DB_INIT=false`
+
+For preview or development deployments you can set both to `true` to enable the demo workflow, but always protect the backend route with authentication and an admin-only check.
+
 ## Technology Stack
 
 - Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, Lucide Icons, shadcn-style UI components
@@ -146,16 +175,16 @@ password123
 
 Available seeded users include:
 
-| Name | Username | Role |
-| --- | --- | --- |
-| John Doe | `john_doe` | admin |
-| Alice Lead | `alice_lead` | leader |
-| Mike Lead | `mike_lead` | leader |
-| Jane Smith | `jane_smith` | member |
+| Name        | Username      | Role   |
+| ----------- | ------------- | ------ |
+| John Doe    | `john_doe`    | admin  |
+| Alice Lead  | `alice_lead`  | leader |
+| Mike Lead   | `mike_lead`   | leader |
+| Jane Smith  | `jane_smith`  | member |
 | Bob Johnson | `bob_johnson` | member |
-| Lisa Green | `lisa_green` | member |
-| Tom Adams | `tom_adams` | member |
-| Sam Wilson | `sam_wilson` | member |
+| Lisa Green  | `lisa_green`  | member |
+| Tom Adams   | `tom_adams`   | member |
+| Sam Wilson  | `sam_wilson`  | member |
 
 ## Current Task Workflow
 

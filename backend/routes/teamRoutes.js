@@ -10,14 +10,13 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.get('/', protect, getTeams);
+router.post('/', protect, createTeam);
 
-router.route('/').get(getTeams).post(createTeam);
+router.get('/:id', protect, getTeamById);
 
-router.route('/:id').get(getTeamById);
+router.post('/:id/members', protect, addTeamMember);
 
-router.route('/:id/members').post(addTeamMember);
-
-router.route('/:id/members/:userId').delete(removeTeamMember);
+router.delete('/:id/members/:userId', protect, removeTeamMember);
 
 export default router;
