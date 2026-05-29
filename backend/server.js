@@ -66,7 +66,14 @@ app.get('/', (req, res) => {
 });
 
 const startServer = async () => {
-  await ensureCollaborationTables(pool);
+  try {
+    await ensureCollaborationTables(pool);
+  } catch (err) {
+    console.warn(
+      'Skipping collaboration tables migration (run /api/db/init first):',
+      err.message,
+    );
+  }
   app.listen(port, () => {
     console.log(`Server started on PORT: ${port}`);
   });
