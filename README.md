@@ -114,6 +114,8 @@ A live version of the app is available at:
 
 Demo credentials are the same as listed in the [Demo Accounts](#demo-accounts) section.
 
+> **Note:** The live version may respond slowly on initial load. This is expected — the backend is hosted on a free tier that spins down after inactivity, and the database is hosted on a free cloud MySQL instance with limited resources. Allow 10–20 seconds for the first request to complete. Subsequent requests will be faster.
+
 ## Run Locally
 
 ### Prerequisites
