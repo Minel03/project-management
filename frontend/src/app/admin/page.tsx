@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { getInitials } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -13,6 +14,7 @@ import {
   Users,
   FolderPlus,
   Plus,
+  Search,
   Trash2,
 } from 'lucide-react';
 
@@ -39,11 +41,18 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [usersLimit] = useState(5);
   const [teams, setTeams] = useState<TeamSummary[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -69,26 +78,37 @@ export default function AdminPage() {
         router.push('/');
         return;
       }
-
-      loadAdminData();
     }
   }, [authLoading, user, router]);
 
-  const leaderCandidates = users.filter((account) => account.role === 'leader');
+  const leaderCandidates = allUsers.filter((account) => account.role === 'leader');
 
-  const loadAdminData = async () => {
+  const loadAdminData = async (page = currentPage, search = userSearch) => {
     setError(null);
     setUsersLoading(true);
     setTeamsLoading(true);
 
     try {
-      const [usersRes, teamsRes] = await Promise.all([
+      const searchParam = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : '';
+      const [usersRes, paginatedUsersRes, teamsRes] = await Promise.all([
         api.get('/api/users'),
+        api.get(`/api/users?page=${page}&limit=${usersLimit}${searchParam}`),
         api.get('/api/teams'),
       ]);
 
       if (usersRes.data.success) {
-        setUsers(usersRes.data.data || []);
+        setAllUsers(usersRes.data.data || []);
+      }
+
+      if (paginatedUsersRes.data.success) {
+        setUsers(paginatedUsersRes.data.data || []);
+        if (paginatedUsersRes.data.pagination) {
+          setTotalPages(paginatedUsersRes.data.pagination.totalPages || 1);
+          setTotalUsers(paginatedUsersRes.data.pagination.total || 0);
+        } else {
+          setTotalPages(1);
+          setTotalUsers(paginatedUsersRes.data.data?.length || 0);
+        }
       }
 
       if (teamsRes.data.success) {
@@ -104,6 +124,21 @@ export default function AdminPage() {
       setTeamsLoading(false);
     }
   };
+
+  const handleUserSearch = (value: string) => {
+    setUserSearch(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      loadAdminData(1, value);
+    }, 350);
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      loadAdminData(currentPage);
+    }
+  }, [currentPage]);
 
   const loadTeamDetails = async (teamId: number) => {
     try {
@@ -144,11 +179,15 @@ export default function AdminPage() {
         role: newUserRole,
       });
       if (res.data.success) {
-        setUsers([res.data.data, ...users]);
         setNewUserName('');
         setNewUserEmail('');
         setNewUserPassword('');
         setNewUserRole('member');
+        if (currentPage === 1) {
+          loadAdminData(1);
+        } else {
+          setCurrentPage(1);
+        }
       }
     } catch (err: any) {
       console.error('Create user failed:', err);
@@ -199,9 +238,7 @@ export default function AdminPage() {
       setSaving(true);
       const res = await api.patch(`/api/users/${userId}/role`, { role });
       if (res.data.success) {
-        setUsers(
-          users.map((item) => (item.id === userId ? res.data.data : item)),
-        );
+        loadAdminData(currentPage);
       }
     } catch (err: any) {
       console.error('Update role failed:', err);
@@ -219,7 +256,13 @@ export default function AdminPage() {
     try {
       setSaving(true);
       await api.delete(`/api/users/${userId}`);
-      setUsers(users.filter((item) => item.id !== userId));
+      const newTotal = totalUsers - 1;
+      const newTotalPages = Math.ceil(newTotal / usersLimit) || 1;
+      if (currentPage > newTotalPages) {
+        setCurrentPage(newTotalPages);
+      } else {
+        loadAdminData(currentPage);
+      }
       if (selectedTeam) {
         setSelectedTeam({
           ...selectedTeam,
@@ -448,49 +491,110 @@ export default function AdminPage() {
                 </p>
               </div>
             </div>
+            {/* Search bar */}
+            <div className='relative mb-4'>
+              <Search className='absolute left-3 top-2.5 w-4 h-4 text-slate-500 pointer-events-none' />
+              <Input
+                type='text'
+                placeholder='Search by username or email...'
+                value={userSearch}
+                onChange={(e) => handleUserSearch(e.target.value)}
+                className='pl-9 rounded-2xl border-slate-800 bg-slate-950 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+              />
+            </div>
+
             {usersLoading ? (
               <div className='flex items-center justify-center py-12'>
                 <Loader2 className='w-6 h-6 text-indigo-500 animate-spin' />
               </div>
             ) : (
-              <div className='space-y-3'>
-                {users.length === 0 ? (
-                  <p className='text-sm text-slate-500'>No users found.</p>
-                ) : (
-                  users.map((account) => (
-                    <div
-                      key={account.id}
-                      className='grid gap-3 rounded-3xl border border-slate-800 bg-slate-950/60 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center'>
-                      <div>
-                        <p className='font-semibold text-slate-100'>
-                          {account.username}
-                        </p>
-                        <p className='text-xs text-slate-500'>
-                          {account.email}
-                        </p>
+              <div>
+                <div className='space-y-3'>
+                  {users.length === 0 ? (
+                    <p className='text-sm text-slate-500'>
+                      {userSearch.trim() ? `No users matching "${userSearch.trim()}"` : 'No users found.'}
+                    </p>
+                  ) : (
+                    users.map((account) => (
+                      <div
+                        key={account.id}
+                        className='grid gap-3 rounded-3xl border border-slate-800 bg-slate-950/60 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center'>
+                        <div>
+                          <p className='font-semibold text-slate-100'>
+                            {account.username}
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            {account.email}
+                          </p>
+                        </div>
+                        <select
+                          value={account.role}
+                          onChange={(e) =>
+                            handleUpdateUserRole(
+                              account.id,
+                              e.target.value as 'admin' | 'leader' | 'member',
+                            )
+                          }
+                          className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+                          <option value='member'>member</option>
+                          <option value='leader'>leader</option>
+                          <option value='admin'>admin</option>
+                        </select>
+                        <Button
+                          className='cursor-pointer hover:text-red-500'
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleDeleteUser(account.id)}>
+                          <Trash2 className='w-4 h-4' />
+                        </Button>
                       </div>
-                      <select
-                        value={account.role}
-                        onChange={(e) =>
-                          handleUpdateUserRole(
-                            account.id,
-                            e.target.value as 'admin' | 'leader' | 'member',
-                          )
-                        }
-                        className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
-                        <option value='member'>member</option>
-                        <option value='leader'>leader</option>
-                        <option value='admin'>admin</option>
-                      </select>
+                    ))
+                  )}
+                </div>
+
+                {/* Pagination Controls */}
+                {!usersLoading && totalPages > 1 && (
+                  <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-800/80'>
+                    <p className='text-xs text-slate-500'>
+                      Showing <span className='font-semibold text-slate-300'>{(currentPage - 1) * usersLimit + 1}</span> to{' '}
+                      <span className='font-semibold text-slate-300'>
+                        {Math.min(currentPage * usersLimit, totalUsers)}
+                      </span> of{' '}
+                      <span className='font-semibold text-slate-300'>{totalUsers}</span> users
+                    </p>
+                    <div className='flex items-center gap-2'>
                       <Button
-                        className='cursor-pointer hover:text-red-500'
-                        variant='ghost'
+                        variant='outline'
                         size='sm'
-                        onClick={() => handleDeleteUser(account.id)}>
-                        <Trash2 className='w-4 h-4' />
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
+                        Previous
+                      </Button>
+                      <div className='flex items-center gap-1'>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                              currentPage === page
+                                ? 'bg-indigo-600 text-slate-100'
+                                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                            }`}>
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
+                        Next
                       </Button>
                     </div>
-                  ))
+                  </div>
                 )}
               </div>
             )}
@@ -607,7 +711,7 @@ export default function AdminPage() {
                   }
                   className='h-10 w-full rounded-2xl border border-slate-800 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                   <option value=''>Select a user</option>
-                  {users
+                  {allUsers
                     .filter(
                       (account) =>
                         !selectedTeam.members.some(

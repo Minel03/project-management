@@ -11,21 +11,22 @@ export async function getProjects(req, res) {
     let rows;
     if (req.user.role === 'admin') {
       const [adminRows] = await pool.query(`
-        SELECT p.*, u.username as creator_name
+        SELECT p.*, u.username as creator_name, teams.name as team_name
         FROM projects p
         JOIN users u ON p.user_id = u.id
+        JOIN teams ON p.team_id = teams.id
         ORDER BY p.created_at DESC
       `);
       rows = adminRows;
     } else {
       const [userRows] = await pool.query(
         `
-        SELECT DISTINCT p.*, u.username as creator_name
+        SELECT DISTINCT p.*, u.username as creator_name, teams.name as team_name
         FROM projects p
         JOIN users u ON p.user_id = u.id
-        LEFT JOIN tasks t ON t.project_id = p.id
-        LEFT JOIN task_assignees ta ON ta.task_id = t.id
-        WHERE p.user_id = ? OR t.assigned_to = ? OR ta.user_id = ?
+        JOIN teams ON p.team_id = teams.id
+        LEFT JOIN team_members tm ON tm.team_id = teams.id
+        WHERE p.user_id = ? OR teams.leader_id = ? OR tm.user_id = ?
         ORDER BY p.created_at DESC
       `,
         [userId, userId, userId],
@@ -51,16 +52,37 @@ export async function getProjects(req, res) {
 // @access  Private
 export async function createProject(req, res) {
   try {
-    const { name, description } = req.body;
+    const { name, description, teamId } = req.body;
     const userId = req.user.id;
-    const canCreateProject =
-      req.user.role === 'admin' || (await isTeamLeader(userId));
-    if (!canCreateProject) {
-      return res.status(403).json({
+
+    if (!teamId) {
+      return res.status(400).json({
         success: false,
-        message: 'Only admins or team leaders can create new projects',
+        message: 'Team assignment is required to create a project',
       });
     }
+
+    if (req.user.role !== 'admin') {
+      const [teamRows] = await pool.query(
+        'SELECT id FROM teams WHERE id = ? AND leader_id = ?',
+        [teamId, userId]
+      );
+      if (teamRows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'You must be the leader of the selected team to create a project for it',
+        });
+      }
+    } else {
+      const [teamRows] = await pool.query('SELECT id FROM teams WHERE id = ?', [teamId]);
+      if (teamRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Specified team not found',
+        });
+      }
+    }
+
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -69,15 +91,19 @@ export async function createProject(req, res) {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO projects (name, description, user_id) VALUES (?, ?, ?)',
-      [name, description, userId],
+      'INSERT INTO projects (name, description, user_id, team_id) VALUES (?, ?, ?, ?)',
+      [name, description, userId, teamId],
     );
 
     const newProjectId = result.insertId;
 
     // Fetch the newly created project
     const [newProj] = await pool.query(
-      'SELECT p.*, u.username as creator_name FROM projects p JOIN users u ON p.user_id = u.id WHERE p.id = ?',
+      `SELECT p.*, u.username as creator_name, teams.name as team_name 
+       FROM projects p 
+       JOIN users u ON p.user_id = u.id 
+       JOIN teams ON p.team_id = teams.id 
+       WHERE p.id = ?`,
       [newProjectId],
     );
 
@@ -105,9 +131,10 @@ export async function getProjectById(req, res) {
     // Fetch project
     const [projectRows] = await pool.query(
       `
-      SELECT p.*, u.username as creator_name 
+      SELECT p.*, u.username as creator_name, teams.name as team_name 
       FROM projects p 
       JOIN users u ON p.user_id = u.id 
+      JOIN teams ON p.team_id = teams.id 
       WHERE p.id = ?
     `,
       [projectId],
@@ -125,9 +152,9 @@ export async function getProjectById(req, res) {
         `
         SELECT 1
         FROM projects p
-        LEFT JOIN tasks t ON t.project_id = p.id
-        LEFT JOIN task_assignees ta ON ta.task_id = t.id
-        WHERE p.id = ? AND (p.user_id = ? OR t.assigned_to = ? OR ta.user_id = ?)
+        JOIN teams ON p.team_id = teams.id
+        LEFT JOIN team_members tm ON tm.team_id = teams.id
+        WHERE p.id = ? AND (p.user_id = ? OR teams.leader_id = ? OR tm.user_id = ?)
         LIMIT 1
       `,
         [projectId, userId, userId, userId],
@@ -211,7 +238,24 @@ export async function getProjectById(req, res) {
       });
     }
 
+    const [teamMemberRows] = await pool.query(
+      `
+      SELECT u.id, u.username, u.email, u.role
+      FROM team_members tm
+      JOIN users u ON tm.user_id = u.id
+      WHERE tm.team_id = ?
+      UNION
+      SELECT u.id, u.username, u.email, u.role
+      FROM teams t
+      JOIN users u ON t.leader_id = u.id
+      WHERE t.id = ?
+      ORDER BY username ASC
+    `,
+      [projectRows[0].team_id, projectRows[0].team_id],
+    );
+
     const project = projectRows[0];
+    project.teamMembers = teamMemberRows;
     project.tasks = taskRows.map((task) => ({
       ...task,
       assignees: assigneeMap[task.id] || [],
@@ -238,12 +282,19 @@ export async function getProjectById(req, res) {
 export async function updateProject(req, res) {
   try {
     const projectId = req.params.id;
-    const { name, description } = req.body;
+    const { name, description, teamId } = req.body;
 
     if (!name) {
       return res.status(400).json({
         success: false,
         message: 'Project name is required',
+      });
+    }
+
+    if (!teamId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team assignment is required',
       });
     }
 
@@ -267,14 +318,40 @@ export async function updateProject(req, res) {
       });
     }
 
+    // If not admin, check if user is leader of the new team
+    if (req.user.role !== 'admin') {
+      const [teamRows] = await pool.query(
+        'SELECT id FROM teams WHERE id = ? AND leader_id = ?',
+        [teamId, req.user.id]
+      );
+      if (teamRows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'You must be the leader of the selected team to assign the project to it',
+        });
+      }
+    } else {
+      const [teamRows] = await pool.query('SELECT id FROM teams WHERE id = ?', [teamId]);
+      if (teamRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Specified team not found',
+        });
+      }
+    }
+
     await pool.query(
-      'UPDATE projects SET name = ?, description = ? WHERE id = ?',
-      [name, description, projectId],
+      'UPDATE projects SET name = ?, description = ?, team_id = ? WHERE id = ?',
+      [name, description, teamId, projectId],
     );
 
     // Fetch updated project
     const [updatedProj] = await pool.query(
-      'SELECT p.*, u.username as creator_name FROM projects p JOIN users u ON p.user_id = u.id WHERE p.id = ?',
+      `SELECT p.*, u.username as creator_name, teams.name as team_name 
+       FROM projects p 
+       JOIN users u ON p.user_id = u.id 
+       JOIN teams ON p.team_id = teams.id 
+       WHERE p.id = ?`,
       [projectId],
     );
 

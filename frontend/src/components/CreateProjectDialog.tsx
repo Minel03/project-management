@@ -7,22 +7,25 @@ import { Button } from '@/components/ui/button';
 interface CreateProjectDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, description: string) => Promise<void>;
+  onCreate: (name: string, description: string, teamId: number) => Promise<void>;
+  teams: { id: number; name: string }[];
 }
 
-export function CreateProjectDialog({ isOpen, onClose, onCreate }: CreateProjectDialogProps) {
+export function CreateProjectDialog({ isOpen, onClose, onCreate, teams }: CreateProjectDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [teamId, setTeamId] = useState<number | ''>('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!name || !teamId) return;
     setSubmitting(true);
     try {
-      await onCreate(name, description);
+      await onCreate(name, description, Number(teamId));
       setName('');
       setDescription('');
+      setTeamId('');
       onClose();
     } catch (err) {
       console.error('Failed to create project:', err);
@@ -59,10 +62,29 @@ export function CreateProjectDialog({ isOpen, onClose, onCreate }: CreateProject
               className="bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200 resize-none"
             />
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5 font-sans">Assign Team</label>
+            <select
+              value={teamId}
+              onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : '')}
+              className="w-full h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-xs text-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              required
+            >
+              <option value="" disabled>Select a team for the project</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            {teams.length === 0 && (
+              <p className="text-[10px] text-rose-400 mt-1 font-sans">
+                You must lead a team (or be admin with teams created) to create a project.
+              </p>
+            )}
+          </div>
           <Button
             type="submit"
-            disabled={submitting}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-xs font-bold py-2.5 rounded-xl cursor-pointer"
+            disabled={submitting || !teamId}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-xs font-bold py-2.5 rounded-xl cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
             {submitting ? 'Creating...' : 'Create Project'}
           </Button>

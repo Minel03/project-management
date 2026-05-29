@@ -3,13 +3,61 @@ import pool from '../config/db.js';
 
 export async function getUsers(req, res) {
   try {
-    const [rows] = await pool.query(
-      'SELECT id, username, email, role, created_at FROM users ORDER BY username ASC',
-    );
-    return res.status(200).json({
-      success: true,
-      data: rows,
-    });
+    const page = req.query.page ? parseInt(req.query.page, 10) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+    const search = req.query.search ? req.query.search.trim() : null;
+
+    if (page && limit && page > 0 && limit > 0) {
+      const offset = (page - 1) * limit;
+      let countSql = 'SELECT COUNT(*) as total FROM users';
+      let selectSql = 'SELECT id, username, email, role, created_at FROM users';
+      const countParams = [];
+      const selectParams = [];
+
+      if (search) {
+        const likePattern = `%${search}%`;
+        countSql += ' WHERE username LIKE ? OR email LIKE ?';
+        selectSql += ' WHERE username LIKE ? OR email LIKE ?';
+        countParams.push(likePattern, likePattern);
+        selectParams.push(likePattern, likePattern);
+      }
+
+      selectSql += ' ORDER BY username ASC LIMIT ? OFFSET ?';
+      selectParams.push(limit, offset);
+
+      // 1. Get total user count
+      const [[{ total }]] = await pool.query(countSql, countParams);
+
+      // 2. Get paginated users
+      const [rows] = await pool.query(selectSql, selectParams);
+
+      return res.status(200).json({
+        success: true,
+        data: rows,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } else {
+      let selectSql = 'SELECT id, username, email, role, created_at FROM users';
+      const selectParams = [];
+
+      if (search) {
+        selectSql += ' WHERE username LIKE ? OR email LIKE ?';
+        selectParams.push(`%${search}%`, `%${search}%`);
+      }
+
+      selectSql += ' ORDER BY username ASC';
+      const [rows] = await pool.query(selectSql, selectParams);
+
+      return res.status(200).json({
+        success: true,
+        data: rows,
+      });
+    }
   } catch (error) {
     console.error('Fetch users error:', error);
     return res.status(500).json({

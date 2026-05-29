@@ -10,6 +10,7 @@ import {
   Trash2,
   Edit3,
   User as UserIcon,
+  Users,
   History,
   FolderPlus,
   Briefcase,
@@ -42,6 +43,9 @@ interface Project {
   name: string;
   description: string;
   creator_name: string;
+  team_name?: string;
+  team_id?: number;
+  teamMembers?: Member[];
   created_at: string;
 }
 
@@ -113,6 +117,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [logs, setLogs] = useState<ChangeLog[]>([]);
+  const [assignableTeams, setAssignableTeams] = useState<{ id: number; name: string }[]>([]);
 
   // UI State
   const [dataLoading, setDataLoading] = useState(true);
@@ -136,6 +141,8 @@ export default function DashboardPage() {
   const [isViewTaskOpen, setIsViewTaskOpen] = useState(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [isEditProjOpen, setIsEditProjOpen] = useState(false);
+  const [isDeleteProjOpen, setIsDeleteProjOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
 
   // Active items for editing
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -148,10 +155,11 @@ export default function DashboardPage() {
       setDataLoading(true);
       setGeneralError(null);
 
-      const [projRes, membersRes, logsRes] = await Promise.all([
+      const [projRes, membersRes, logsRes, teamsRes] = await Promise.all([
         api.get('/api/projects'),
         api.get('/api/users'),
         api.get('/api/logs'),
+        api.get('/api/teams'),
       ]);
 
       if (projRes.data.success) {
@@ -167,6 +175,15 @@ export default function DashboardPage() {
 
       if (logsRes.data.success) {
         setLogs(logsRes.data.data);
+      }
+
+      if (teamsRes.data.success) {
+        const teamsData = teamsRes.data.data;
+        if (user?.role === 'admin') {
+          setAssignableTeams(teamsData.allTeams || []);
+        } else {
+          setAssignableTeams(teamsData.leaderOf || []);
+        }
       }
     } catch (err: any) {
       console.error('Fetch dashboard details failed:', err);
@@ -185,7 +202,13 @@ export default function DashboardPage() {
     try {
       const res = await api.get(`/api/projects/${project.id}`);
       if (res.data.success) {
-        setTasks(res.data.data.tasks || []);
+        const projectDetail = res.data.data;
+        setTasks(projectDetail.tasks || []);
+        // Enrich activeProject with teamMembers so task assignee dropdowns
+        // are scoped to only the project's team members
+        setActiveProject((prev) =>
+          prev ? { ...prev, teamMembers: projectDetail.teamMembers || [] } : prev,
+        );
       }
       refreshLogs(project.id);
     } catch (err) {
@@ -222,14 +245,15 @@ export default function DashboardPage() {
   // ==========================================
   // PROJECT CRUD HANDLERS
   // ==========================================
-  const handleCreateProject = async (name: string, description: string) => {
+  const handleCreateProject = async (name: string, description: string, teamId: number) => {
     try {
-      const res = await api.post('/api/projects', { name, description });
+      const res = await api.post('/api/projects', { name, description, teamId });
       if (res.data.success) {
         const createdProj = res.data.data;
-        setProjects([createdProj, ...projects]);
-        setActiveProject(createdProj);
-        setTasks([]);
+        setProjects((prev) => [createdProj, ...prev]);
+        // Use handleSelectProject so teamMembers are immediately fetched
+        // and the assignee dropdown works right after project creation
+        await handleSelectProject(createdProj);
         refreshLogs();
       }
     } catch (err) {
@@ -238,12 +262,13 @@ export default function DashboardPage() {
     }
   };
 
-  const handleEditProject = async (name: string, description: string) => {
+  const handleEditProject = async (name: string, description: string, teamId: number) => {
     if (!activeProject) return;
     try {
       const res = await api.put(`/api/projects/${activeProject.id}`, {
         name,
         description,
+        teamId,
       });
       if (res.data.success) {
         const updatedProj = res.data.data;
@@ -259,13 +284,6 @@ export default function DashboardPage() {
   };
 
   const handleDeleteProject = async (projectId: number) => {
-    if (
-      !confirm(
-        'Are you sure you want to delete this project? All tasks and change logs will be lost permanently.',
-      )
-    )
-      return;
-
     try {
       const res = await api.delete(`/api/projects/${projectId}`);
       if (res.data.success) {
@@ -283,6 +301,9 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error('Delete project failed:', err);
+    } finally {
+      setIsDeleteProjOpen(false);
+      setProjectToDelete(null);
     }
   };
 
@@ -677,10 +698,11 @@ export default function DashboardPage() {
                             title='Edit Project'>
                             <Edit3 className='w-3.5 h-3.5' />
                           </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteProject(activeProject.id)
-                            }
+                           <button
+                            onClick={() => {
+                              setProjectToDelete(activeProject.id);
+                              setIsDeleteProjOpen(true);
+                            }}
                             className='p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition-colors cursor-pointer'
                             title='Delete Project'>
                             <Trash2 className='w-3.5 h-3.5' />
@@ -696,6 +718,15 @@ export default function DashboardPage() {
                         <UserIcon className='w-3 h-3 text-indigo-400' />
                         Owner: {activeProject.creator_name}
                       </span>
+                      {activeProject.team_name && (
+                        <>
+                          <span>•</span>
+                          <span className='flex items-center gap-1'>
+                            <Users className='w-3 h-3 text-emerald-400' />
+                            Team: {activeProject.team_name}
+                          </span>
+                        </>
+                      )}
                       <span>•</span>
                       <span className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-cyan-400' />
@@ -807,6 +838,7 @@ export default function DashboardPage() {
         isOpen={isProjModalOpen}
         onClose={() => setIsProjModalOpen(false)}
         onCreate={handleCreateProject}
+        teams={assignableTeams}
       />
 
       <EditProjectDialog
@@ -814,12 +846,47 @@ export default function DashboardPage() {
         onClose={() => setIsEditProjOpen(false)}
         project={activeProject}
         onSave={handleEditProject}
+        teams={assignableTeams}
       />
+
+      <Dialog open={isDeleteProjOpen} onOpenChange={setIsDeleteProjOpen}>
+        <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-md rounded-3xl p-6'>
+          <DialogHeader>
+            <DialogTitle className='text-base font-bold text-slate-100 flex items-center gap-2'>
+              <Trash2 className='w-4.5 h-4.5 text-rose-500' />
+              Delete Project
+            </DialogTitle>
+            <DialogDescription className='text-sm text-slate-400 font-sans'>
+              Are you sure you want to delete this project? All tasks and change logs will be lost permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-4 flex justify-end gap-2'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setIsDeleteProjOpen(false);
+                setProjectToDelete(null);
+              }}
+              className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer'>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (projectToDelete) {
+                  await handleDeleteProject(projectToDelete);
+                }
+              }}
+              className='bg-rose-600 hover:bg-rose-500 text-slate-100 rounded-xl cursor-pointer'>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CreateTaskDialog
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
-        members={members}
+        members={activeProject?.teamMembers || []}
         onCreate={handleCreateTask}
       />
 
@@ -827,7 +894,7 @@ export default function DashboardPage() {
         isOpen={isEditTaskOpen}
         onClose={() => setIsEditTaskOpen(false)}
         task={activeTask}
-        members={members}
+        members={activeProject?.teamMembers || []}
         onSave={handleUpdateTask}
       />
 
@@ -835,7 +902,7 @@ export default function DashboardPage() {
         isOpen={isViewTaskOpen}
         onClose={() => setIsViewTaskOpen(false)}
         task={activeTask}
-        members={members}
+        members={activeProject?.teamMembers || []}
         onAddComment={handleAddTaskComment}
         onAddSubtask={handleAddSubtask}
         onToggleSubtask={handleToggleSubtask}

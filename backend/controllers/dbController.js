@@ -65,8 +65,10 @@ export async function initDatabase(req, res) {
         name VARCHAR(255) NOT NULL,
         description TEXT,
         user_id INT NOT NULL,
+        team_id INT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
       )`,
       // Tasks table
       `CREATE TABLE IF NOT EXISTS tasks (
@@ -165,6 +167,25 @@ export async function initDatabase(req, res) {
     ]);
     if (dueDateColumn.length === 0) {
       await pool.query('ALTER TABLE tasks ADD COLUMN due_date DATE NULL');
+    }
+
+    // Ensure team_id column exists in projects
+    const [teamIdColumn] = await pool.query('SHOW COLUMNS FROM projects LIKE ?', [
+      'team_id',
+    ]);
+    if (teamIdColumn.length === 0) {
+      await pool.query('ALTER TABLE projects ADD COLUMN team_id INT NULL');
+      
+      const [firstTeam] = await pool.query('SELECT id FROM teams LIMIT 1');
+      if (firstTeam.length > 0) {
+        await pool.query('UPDATE projects SET team_id = ? WHERE team_id IS NULL', [
+          firstTeam[0].id,
+        ]);
+      }
+      
+      await pool.query(
+        'ALTER TABLE projects ADD CONSTRAINT fk_projects_team_id FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE',
+      );
     }
 
     // If task_assignees exists but is empty, migrate any legacy assigned_to values
@@ -267,18 +288,20 @@ export async function initDatabase(req, res) {
           'Website Redesign',
           'Overhaul the company marketing site for modern aesthetics and speed.',
           userIds[1],
+          alphaTeamId,
         ],
         [
           'Mobile Application',
           'Develop a React Native mobile application for customer portal.',
           userIds[2],
+          betaTeamId,
         ],
       ];
 
       const projectIds = [];
       for (const projData of projectsData) {
         const [result] = await pool.query(
-          'INSERT INTO projects (name, description, user_id) VALUES (?, ?, ?)',
+          'INSERT INTO projects (name, description, user_id, team_id) VALUES (?, ?, ?, ?)',
           projData,
         );
         projectIds.push(result.insertId);
