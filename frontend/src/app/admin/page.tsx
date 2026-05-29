@@ -36,7 +36,7 @@ interface TeamDetails extends TeamSummary {
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [teams, setTeams] = useState<TeamSummary[]>([]);
@@ -287,7 +287,7 @@ export default function AdminPage() {
             variant='ghost'
             size='icon'
             onClick={() => router.push('/')}
-            className='text-slate-400 hover:text-slate-100'>
+            className='text-slate-400 hover:text-slate-100 cursor-pointer'>
             <ArrowLeft className='w-4 h-4' />
           </Button>
           <div>
@@ -298,18 +298,6 @@ export default function AdminPage() {
               Manage system users, teams, and access levels.
             </p>
           </div>
-        </div>
-
-        <div className='flex flex-wrap items-center gap-3'>
-          <div className='rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm text-slate-300'>
-            <span className='font-semibold text-slate-100'>Signed in as</span>{' '}
-            {user.username}
-          </div>
-          <button
-            onClick={logout}
-            className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 bg-slate-950/60 hover:bg-rose-950/10 transition-all text-xs font-medium'>
-            Log out
-          </button>
         </div>
       </header>
 
@@ -382,7 +370,8 @@ export default function AdminPage() {
               <div className='flex justify-end'>
                 <Button
                   onClick={handleCreateUser}
-                  disabled={saving}>
+                  disabled={saving}
+                  className='cursor-pointer hover:bg-gray-400'>
                   <Plus className='mr-2 h-4 w-4' /> Create User
                 </Button>
               </div>
@@ -437,7 +426,8 @@ export default function AdminPage() {
               <div className='flex justify-end'>
                 <Button
                   onClick={handleCreateTeam}
-                  disabled={saving}>
+                  disabled={saving}
+                  className='cursor-pointer hover:bg-gray-400'>
                   <Plus className='mr-2 h-4 w-4' /> Create Team
                 </Button>
               </div>
@@ -493,6 +483,7 @@ export default function AdminPage() {
                         <option value='admin'>admin</option>
                       </select>
                       <Button
+                        className='cursor-pointer hover:text-red-500'
                         variant='ghost'
                         size='sm'
                         onClick={() => handleDeleteUser(account.id)}>
@@ -529,7 +520,7 @@ export default function AdminPage() {
                       key={team.id}
                       type='button'
                       onClick={() => handleTeamToggle(team.id)}
-                      className={`w-full rounded-3xl border p-4 text-left transition-all ${
+                      className={`w-full rounded-3xl border p-4 text-left transition-all cursor-pointer ${
                         selectedTeam?.id === team.id
                           ? 'border-cyan-500/40 bg-cyan-500/10'
                           : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'
@@ -566,7 +557,7 @@ export default function AdminPage() {
               </div>
               <div className='flex items-center gap-2'>
                 <span className='rounded-full bg-slate-950 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-400'>
-                  Team details
+                  Team Details
                 </span>
               </div>
             </div>
@@ -593,6 +584,7 @@ export default function AdminPage() {
                           </p>
                         </div>
                         <Button
+                          className='cursor-pointer hover:text-red-500'
                           variant='ghost'
                           size='sm'
                           onClick={() => handleRemoveMember(member.id)}>
@@ -631,7 +623,7 @@ export default function AdminPage() {
                     ))}
                 </select>
                 <Button
-                  className='mt-4 w-full'
+                  className='mt-4 w-full cursor-pointer'
                   onClick={handleAddMember}
                   disabled={saving || !selectedMemberToAdd}>
                   Add member

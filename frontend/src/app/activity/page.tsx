@@ -180,7 +180,7 @@ export default function ActivityPage() {
             variant='ghost'
             size='icon'
             onClick={() => router.push('/')}
-            className='text-slate-400 hover:text-slate-100'>
+            className='text-slate-400 hover:text-slate-100 cursor-pointer'>
             <ArrowLeft className='w-4 h-4' />
           </Button>
           <div>
