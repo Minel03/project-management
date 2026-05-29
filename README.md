@@ -109,8 +109,8 @@ For preview or development deployments you can set both to `true` to enable the 
 
 A live version of the app is available at:
 
-- **Frontend**: [https://your-vercel-url.vercel.app](https://your-vercel-url.vercel.app)
-- **Backend**: [https://your-backend-url.render.com](https://your-backend-url.render.com)
+- **Frontend**: [https://project-management-one-tau.vercel.app](https://project-management-one-tau.vercel.app)
+- **Backend**: [https://project-management-backend-neon.vercel.app](https://project-management-backend-neon.vercel.app)
 
 Demo credentials are the same as listed in the [Demo Accounts](#demo-accounts) section.
 
