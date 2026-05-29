@@ -72,19 +72,19 @@ export function CreateUserDialog({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}>
-      <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-lg rounded-3xl p-6'>
+      <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-lg rounded-3xl p-6'>
         <DialogHeader>
-          <DialogTitle className='text-base font-bold text-slate-100'>
+          <DialogTitle className='text-base font-bold text-foreground'>
             User Management
           </DialogTitle>
-          <DialogDescription className='text-sm text-slate-400'>
+          <DialogDescription className='text-sm text-muted-foreground'>
             Create system users and view existing accounts.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='grid gap-3'>
-            <label className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+            <label className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
               Username
             </label>
             <Input
@@ -94,7 +94,7 @@ export function CreateUserDialog({
             />
           </div>
           <div className='grid gap-3'>
-            <label className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+            <label className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
               Email
             </label>
             <Input
@@ -105,7 +105,7 @@ export function CreateUserDialog({
             />
           </div>
           <div className='grid gap-3'>
-            <label className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+            <label className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
               Password
             </label>
             <Input
@@ -116,7 +116,7 @@ export function CreateUserDialog({
             />
           </div>
           <div className='grid gap-3'>
-            <label className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+            <label className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
               Role
             </label>
             <select
@@ -124,7 +124,7 @@ export function CreateUserDialog({
               onChange={(e) =>
                 setRole(e.target.value as 'admin' | 'leader' | 'member')
               }
-              className='h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+              className='h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
               <option value='member'>Member</option>
               <option value='leader'>Leader</option>
               <option value='admin'>Admin</option>
@@ -137,23 +137,23 @@ export function CreateUserDialog({
             </div>
           )}
 
-          <div className='rounded-3xl border border-slate-800 bg-slate-950/80 p-4'>
-            <p className='text-xs uppercase tracking-[0.18em] text-slate-500 mb-3'>
+          <div className='rounded-3xl border border-border bg-background/80 p-4'>
+            <p className='text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3'>
               Existing accounts
             </p>
             <div className='space-y-2 max-h-48 overflow-y-auto pr-2'>
               {users.length === 0 ? (
-                <p className='text-xs text-slate-500'>No users found.</p>
+                <p className='text-xs text-muted-foreground'>No users found.</p>
               ) : (
                 users.map((user) => (
                   <div
                     key={user.id}
-                    className='flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm text-slate-200'>
+                    className='flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground'>
                     <div>
                       <p className='font-semibold'>{user.username}</p>
-                      <p className='text-[11px] text-slate-500'>{user.email}</p>
+                      <p className='text-[11px] text-muted-foreground'>{user.email}</p>
                     </div>
-                    <span className='rounded-full bg-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-slate-400'>
+                    <span className='rounded-full bg-muted px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground'>
                       {user.role || 'member'}
                     </span>
                   </div>

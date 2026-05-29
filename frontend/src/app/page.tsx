@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import api from '@/utils/api';
 import {
   Plus,
@@ -19,6 +20,9 @@ import {
   Loader2,
   Folder,
   Calendar,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 import { KanbanColumn } from '@/components/KanbanColumn';
@@ -107,9 +111,16 @@ interface ChangeLog {
 
 export default function DashboardPage() {
   const { user, loading: authLoading, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const canManageWorkspace =
     user?.role === 'admin' || (user?.leaderOf?.length ?? 0) > 0;
+
+  const cycleTheme = () => {
+    if (theme === 'system') setTheme('light');
+    else if (theme === 'light') setTheme('dark');
+    else setTheme('system');
+  };
 
   // Core Data State
   const [projects, setProjects] = useState<Project[]>([]);
@@ -517,19 +528,19 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-slate-950'>
+      <div className='min-h-screen flex items-center justify-center bg-background text-foreground'>
         <Loader2 className='w-8 h-8 text-indigo-500 animate-spin' />
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen flex flex-col bg-zinc-950'>
+    <div className='min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200'>
       {/* Header NavBar */}
-      <header className='sticky top-0 z-20 shrink-0 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between'>
+      <header className='sticky top-0 z-20 shrink-0 border-b border-border bg-card/85 backdrop-blur-md px-6 py-4 flex items-center justify-between transition-colors duration-200'>
         <div className='flex items-center gap-3'>
           <div>
-            <span className='text-base font-semibold text-slate-100 font-sans tracking-tight'>
+            <span className='text-base font-semibold text-foreground font-sans tracking-tight'>
               Project Management Tool
             </span>
           </div>
@@ -537,22 +548,24 @@ export default function DashboardPage() {
 
         {user && (
           <div className='flex items-center gap-4'>
-            <div className='flex items-center gap-2.5'>
-              <div className='w-8 h-8 rounded-full bg-slate-800 border border-indigo-500/20 flex items-center justify-center text-xs font-semibold text-indigo-300'>
-                {getInitials(user.username)}
-              </div>
-              <div className='hidden sm:block text-left'>
-                <p className='text-xs font-semibold text-slate-200'>
-                  {user.username}
-                </p>
-                <p className='text-[10px] text-slate-500'>{user.email}</p>
-              </div>
-            </div>
+            {/* Theme Toggle Button */}
+            <button
+              onClick={cycleTheme}
+              className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'
+              title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Click to toggle)`}
+            >
+              {theme === 'light' && <Sun className='w-3.5 h-3.5' />}
+              {theme === 'dark' && <Moon className='w-3.5 h-3.5' />}
+              {theme === 'system' && <Monitor className='w-3.5 h-3.5' />}
+              <span className='hidden sm:inline font-sans capitalize'>
+                {theme === 'system' ? 'System Theme' : `${theme} Mode`}
+              </span>
+            </button>
 
             {user?.role === 'admin' && (
               <button
                 onClick={() => router.push('/activity')}
-                className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-indigo-500/30 text-slate-400 hover:text-indigo-400 bg-slate-950/60 hover:bg-indigo-950/10 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
+                className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
                 <History className='w-3.5 h-3.5' />
                 <span className='hidden sm:inline font-sans'>
                   Activity Feed
@@ -563,16 +576,29 @@ export default function DashboardPage() {
             {user?.role === 'admin' && (
               <button
                 onClick={() => router.push('/admin')}
-                className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-emerald-500/30 text-slate-400 hover:text-emerald-400 bg-slate-950/60 hover:bg-emerald-950/10 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
+                className='py-1.5 px-3 rounded-lg border border-border hover:border-emerald-500/30 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
                 <UserIcon className='w-3.5 h-3.5' />
                 <span className='hidden sm:inline font-sans'>
                   Admin Console
                 </span>
               </button>
             )}
+
+            <div className='flex items-center gap-2.5'>
+              <div className='w-8 h-8 rounded-full bg-muted border border-indigo-500/20 flex items-center justify-center text-xs font-semibold text-indigo-600 dark:text-indigo-300'>
+                {getInitials(user.username)}
+              </div>
+              <div className='hidden sm:block text-left'>
+                <p className='text-xs font-semibold text-foreground/90'>
+                  {user.username}
+                </p>
+                <p className='text-[10px] text-muted-foreground'>{user.email}</p>
+              </div>
+            </div>
+
             <button
               onClick={logout}
-              className='py-1.5 px-3 rounded-lg border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 bg-slate-950/60 hover:bg-rose-950/10 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
+              className='py-1.5 px-3 rounded-lg border border-border hover:border-rose-500/30 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
               <LogOut className='w-3.5 h-3.5' />
               <span className='hidden sm:inline font-sans'>Logout</span>
             </button>
@@ -582,42 +608,42 @@ export default function DashboardPage() {
 
       {/* Main Workspace Frame */}
       {generalError ? (
-        <div className='flex-1 flex items-center justify-center p-6 bg-slate-950'>
-          <div className='p-6 rounded-2xl bg-rose-950/20 border border-rose-500/20 max-w-md text-center'>
+        <div className='flex-1 flex items-center justify-center p-6 bg-background'>
+          <div className='p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 max-w-md text-center'>
             <AlertCircle className='w-10 h-10 text-rose-500 mx-auto mb-3' />
-            <h3 className='text-lg font-bold text-rose-300 mb-1 font-sans'>
+            <h3 className='text-lg font-bold text-rose-500 mb-1 font-sans'>
               System Error
             </h3>
-            <p className='text-xs text-slate-400 mb-4'>{generalError}</p>
+            <p className='text-xs text-muted-foreground mb-4'>{generalError}</p>
             <button
               onClick={fetchData}
-              className='py-1.5 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium cursor-pointer'>
+              className='py-1.5 px-4 rounded-lg bg-muted hover:bg-muted/80 text-foreground border border-border text-xs font-medium cursor-pointer'>
               Retry Connection
             </button>
           </div>
         </div>
       ) : dataLoading ? (
-        <div className='flex-1 flex items-center justify-center bg-slate-950'>
+        <div className='flex-1 flex items-center justify-center bg-background'>
           <div className='text-center'>
             <Loader2 className='w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3' />
-            <p className='text-xs text-slate-500'>
+            <p className='text-xs text-muted-foreground'>
               Syncing with workspace variables...
             </p>
           </div>
         </div>
       ) : (
-        <div className='flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-950'>
+        <div className='flex-1 flex flex-col lg:flex-row overflow-hidden bg-background'>
           {/* LEFT COLUMN: Project Panel */}
-          <aside className='w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-slate-900 bg-slate-950/50 backdrop-blur-sm p-4 flex flex-col overflow-y-auto shrink-0'>
+          <aside className='w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-card/45 backdrop-blur-sm p-4 flex flex-col overflow-y-auto shrink-0 transition-colors duration-200'>
             <div className='flex items-center justify-between mb-4'>
-              <div className='flex items-center gap-1.5 text-slate-400 text-xs font-bold uppercase tracking-wider'>
+              <div className='flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider'>
                 <Briefcase className='w-3.5 h-3.5 text-indigo-500' />
                 <span className='font-sans'>My Projects</span>
               </div>
               {canManageWorkspace ? (
                 <button
                   onClick={() => setIsProjModalOpen(true)}
-                  className='p-1 rounded-md border border-indigo-500/20 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer'
+                  className='p-1 rounded-md border border-indigo-500/20 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 transition-all cursor-pointer'
                   title='Create Project'>
                   <Plus className='w-4 h-4' />
                 </button>
@@ -625,17 +651,17 @@ export default function DashboardPage() {
             </div>
 
             {projects.length === 0 ? (
-              <div className='text-center py-8 px-4 border border-dashed border-slate-800 rounded-xl'>
-                <Folder className='w-6 h-6 text-slate-700 mx-auto mb-2' />
-                <p className='text-xs text-slate-500'>No projects yet.</p>
+              <div className='text-center py-8 px-4 border border-dashed border-border rounded-xl'>
+                <Folder className='w-6 h-6 text-muted-foreground/60 mx-auto mb-2' />
+                <p className='text-xs text-muted-foreground'>No projects yet.</p>
                 {canManageWorkspace ? (
                   <button
                     onClick={() => setIsProjModalOpen(true)}
-                    className='mt-2.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer'>
+                    className='mt-2.5 text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold cursor-pointer'>
                     Create one now
                   </button>
                 ) : (
-                  <p className='mt-2.5 text-xs text-slate-500'>
+                  <p className='mt-2.5 text-xs text-muted-foreground'>
                     Only team leaders and admins can create new projects.
                   </p>
                 )}
@@ -650,12 +676,12 @@ export default function DashboardPage() {
                       onClick={() => handleSelectProject(proj)}
                       className={`group w-full flex items-center justify-between p-3 rounded-xl border text-left cursor-pointer transition-all ${
                         isActive
-                          ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-200'
-                          : 'bg-slate-900/20 border-slate-900 hover:border-slate-800 text-slate-400 hover:text-slate-300'
+                          ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-200'
+                          : 'bg-muted/20 border-border hover:border-foreground/10 text-muted-foreground hover:text-foreground'
                       }`}>
                       <div className='flex items-center gap-2.5 min-w-0'>
                         <Folder
-                          className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-600'}`}
+                          className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-500 dark:text-indigo-400' : 'text-muted-foreground/60'}`}
                         />
                         <span className='text-xs font-semibold truncate leading-none'>
                           {proj.name}
@@ -664,8 +690,8 @@ export default function DashboardPage() {
                       <ChevronRight
                         className={`w-3.5 h-3.5 transition-transform shrink-0 ${
                           isActive
-                            ? 'text-indigo-400 translate-x-0.5'
-                            : 'text-slate-700 group-hover:text-slate-500'
+                            ? 'text-indigo-500 dark:text-indigo-400 translate-x-0.5'
+                            : 'text-muted-foreground/40 group-hover:text-muted-foreground/75'
                         }`}
                       />
                     </div>
@@ -680,10 +706,10 @@ export default function DashboardPage() {
             {activeProject ? (
               <div className='flex-1 flex flex-col overflow-hidden'>
                 {/* Project SubHeader */}
-                <div className='p-6 border-b border-slate-900 bg-slate-950/20 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+                <div className='p-6 border-b border-border bg-card/20 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-colors duration-200'>
                   <div>
                     <div className='flex items-center gap-3'>
-                      <h1 className='text-xl font-bold tracking-tight text-slate-100 font-sans'>
+                      <h1 className='text-xl font-bold tracking-tight text-foreground font-sans'>
                         {activeProject.name}
                       </h1>
                       {canManageWorkspace ? (
@@ -694,42 +720,42 @@ export default function DashboardPage() {
                               setEditProjDesc(activeProject.description || '');
                               setIsEditProjOpen(true);
                             }}
-                            className='p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer'
+                            className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer'
                             title='Edit Project'>
                             <Edit3 className='w-3.5 h-3.5' />
                           </button>
-                           <button
+                          <button
                             onClick={() => {
                               setProjectToDelete(activeProject.id);
                               setIsDeleteProjOpen(true);
                             }}
-                            className='p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition-colors cursor-pointer'
+                            className='p-1 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-muted transition-colors cursor-pointer'
                             title='Delete Project'>
                             <Trash2 className='w-3.5 h-3.5' />
                           </button>
                         </div>
                       ) : null}
                     </div>
-                    <p className='text-xs text-slate-400 mt-1 max-w-xl'>
+                    <p className='text-xs text-muted-foreground mt-1 max-w-xl'>
                       {activeProject.description || 'No description provided.'}
                     </p>
-                    <div className='flex items-center gap-3 mt-2 text-[10px] text-slate-500'>
+                    <div className='flex items-center gap-3 mt-2 text-[10px] text-muted-foreground'>
                       <span className='flex items-center gap-1'>
-                        <UserIcon className='w-3 h-3 text-indigo-400' />
+                        <UserIcon className='w-3 h-3 text-indigo-500' />
                         Owner: {activeProject.creator_name}
                       </span>
                       {activeProject.team_name && (
                         <>
-                          <span>•</span>
+                          <span>|</span>
                           <span className='flex items-center gap-1'>
-                            <Users className='w-3 h-3 text-emerald-400' />
+                            <Users className='w-3 h-3 text-emerald-500' />
                             Team: {activeProject.team_name}
                           </span>
                         </>
                       )}
-                      <span>•</span>
+                      <span>|</span>
                       <span className='flex items-center gap-1'>
-                        <Calendar className='w-3 h-3 text-cyan-400' />
+                        <Calendar className='w-3 h-3 text-cyan-500' />
                         Created:{' '}
                         {new Date(
                           activeProject.created_at,
@@ -741,7 +767,7 @@ export default function DashboardPage() {
                   {canManageWorkspace ? (
                     <button
                       onClick={() => setIsTaskModalOpen(true)}
-                      className='self-start sm:self-auto py-2 px-3.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-slate-100 shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
+                      className='self-start sm:self-auto py-2 px-3.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-primary-foreground shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
                       <Plus className='w-4 h-4' />
                       <span className='font-sans'>Create Task</span>
                     </button>
@@ -805,23 +831,23 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className='flex-1 flex flex-col items-center justify-center p-6 text-center'>
-                <Folder className='w-12 h-12 text-slate-800 mb-3' />
-                <h3 className='text-base font-bold text-slate-300 font-sans'>
+                <Folder className='w-12 h-12 text-muted-foreground/30 mb-3' />
+                <h3 className='text-base font-bold text-foreground/90 font-sans'>
                   No Project Active
                 </h3>
-                <p className='text-xs text-slate-500 max-w-sm mt-1 mb-5'>
+                <p className='text-xs text-muted-foreground max-w-sm mt-1 mb-5'>
                   Select a project from the sidebar to view its Kanban board, or
                   configure a new workspace right away.
                 </p>
                 {canManageWorkspace ? (
                   <button
                     onClick={() => setIsProjModalOpen(true)}
-                    className='py-2 px-4 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-slate-100 shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
+                    className='py-2 px-4 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-primary-foreground shadow-md shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-1.5 text-xs cursor-pointer'>
                     <FolderPlus className='w-4 h-4' />
                     <span className='font-sans'>Create First Project</span>
                   </button>
                 ) : (
-                  <p className='text-xs text-slate-500 max-w-sm mt-3'>
+                  <p className='text-xs text-muted-foreground max-w-sm mt-3'>
                     Only team leaders and admins can create the first project.
                   </p>
                 )}
@@ -850,13 +876,13 @@ export default function DashboardPage() {
       />
 
       <Dialog open={isDeleteProjOpen} onOpenChange={setIsDeleteProjOpen}>
-        <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-md rounded-3xl p-6'>
+        <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
-            <DialogTitle className='text-base font-bold text-slate-100 flex items-center gap-2'>
+            <DialogTitle className='text-base font-bold text-foreground flex items-center gap-2'>
               <Trash2 className='w-4.5 h-4.5 text-rose-500' />
               Delete Project
             </DialogTitle>
-            <DialogDescription className='text-sm text-slate-400 font-sans'>
+            <DialogDescription className='text-sm text-muted-foreground font-sans'>
               Are you sure you want to delete this project? All tasks and change logs will be lost permanently.
             </DialogDescription>
           </DialogHeader>
@@ -867,7 +893,7 @@ export default function DashboardPage() {
                 setIsDeleteProjOpen(false);
                 setProjectToDelete(null);
               }}
-              className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer'>
+              className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer'>
               Cancel
             </Button>
             <Button
@@ -876,7 +902,7 @@ export default function DashboardPage() {
                   await handleDeleteProject(projectToDelete);
                 }
               }}
-              className='bg-rose-600 hover:bg-rose-500 text-slate-100 rounded-xl cursor-pointer'>
+              className='bg-rose-600 hover:bg-rose-500 text-rose-foreground rounded-xl cursor-pointer'>
               Delete
             </Button>
           </DialogFooter>
@@ -918,12 +944,12 @@ export default function DashboardPage() {
             setMoveRemark('');
           }
         }}>
-        <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-md rounded-3xl p-6'>
+        <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
-            <DialogTitle className='text-base font-bold text-slate-100'>
+            <DialogTitle className='text-base font-bold text-foreground'>
               Move task to {moveTargetStatus}
             </DialogTitle>
-            <DialogDescription className='text-sm text-slate-400'>
+            <DialogDescription className='text-sm text-muted-foreground'>
               {draggedTaskForMove
                 ? `Add a remark for moving "${draggedTaskForMove.title}" to ${moveTargetStatus}.`
                 : 'Add a remark for this status change.'}
@@ -934,7 +960,7 @@ export default function DashboardPage() {
             value={moveRemark}
             onChange={(e) => setMoveRemark(e.target.value)}
             placeholder='Optional remark'
-            className='min-h-30 w-full resize-none rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+            className='min-h-30 w-full resize-none rounded-2xl border border-input bg-background px-3 py-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
           />
 
           <DialogFooter className='mt-4 flex justify-end gap-2'>
@@ -945,7 +971,8 @@ export default function DashboardPage() {
                 setDraggedTaskForMove(null);
                 setMoveTargetStatus(null);
                 setMoveRemark('');
-              }}>
+              }}
+              className='rounded-xl border-border bg-background text-foreground hover:bg-muted'>
               Cancel
             </Button>
             <Button onClick={handleConfirmMoveTask}>Confirm</Button>

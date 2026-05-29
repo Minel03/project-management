@@ -78,8 +78,8 @@ export function EditTaskDialog({
   const selectStyles = {
     control: (provided: any) => ({
       ...provided,
-      backgroundColor: '#0f172a',
-      borderColor: '#334155',
+      backgroundColor: 'var(--background)',
+      borderColor: 'var(--input)',
       minHeight: '2.75rem',
       boxShadow: 'none',
       '&:hover': {
@@ -88,39 +88,39 @@ export function EditTaskDialog({
     }),
     menu: (provided: any) => ({
       ...provided,
-      backgroundColor: '#0f172a',
+      backgroundColor: 'var(--popover)',
       zIndex: 50,
     }),
     option: (provided: any, state: any) => ({
       ...provided,
-      backgroundColor: state.isFocused ? '#334155' : '#0f172a',
-      color: state.isFocused ? '#f8fafc' : '#cbd5e1',
+      backgroundColor: state.isFocused ? 'var(--muted)' : 'var(--popover)',
+      color: 'var(--popover-foreground)',
       cursor: 'pointer',
     }),
     multiValue: (provided: any) => ({
       ...provided,
-      backgroundColor: '#1e293b',
+      backgroundColor: 'var(--muted)',
     }),
     multiValueLabel: (provided: any) => ({
       ...provided,
-      color: '#e2e8f0',
+      color: 'var(--foreground)',
       fontSize: '0.75rem',
     }),
     multiValueRemove: (provided: any) => ({
       ...provided,
-      color: '#94a3b8',
+      color: 'var(--muted-foreground)',
       ':hover': {
-        backgroundColor: '#475569',
-        color: '#f8fafc',
+        backgroundColor: 'var(--accent)',
+        color: 'var(--accent-foreground)',
       },
     }),
     placeholder: (provided: any) => ({
       ...provided,
-      color: '#94a3b8',
+      color: 'var(--muted-foreground)',
     }),
     input: (provided: any) => ({
       ...provided,
-      color: '#f8fafc',
+      color: 'var(--foreground)',
     }),
   };
 
@@ -187,9 +187,9 @@ export function EditTaskDialog({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-md rounded-3xl p-6'>
+      <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
         <DialogHeader>
-          <DialogTitle className='text-base font-bold text-slate-100'>
+          <DialogTitle className='text-base font-bold text-foreground'>
             Edit Task
           </DialogTitle>
           {task?.started_by_name ? (
@@ -202,7 +202,7 @@ export function EditTaskDialog({
           onSubmit={handleSubmit}
           className='space-y-4 mt-2'>
           <div>
-            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+            <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
               Task Title
             </label>
             <Input
@@ -210,23 +210,23 @@ export function EditTaskDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder='Task title'
-              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+              className='bg-background border-input focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground'
               required
             />
           </div>
           <div>
-            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+            <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
               Due Date
             </label>
             <Input
               type='date'
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+              className='bg-background border-input focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground'
             />
           </div>
           <div>
-            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+            <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
               Description
             </label>
             <Textarea
@@ -234,12 +234,12 @@ export function EditTaskDialog({
               onChange={(e) => setDescription(e.target.value)}
               placeholder='Provide notes...'
               rows={2}
-              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200 resize-none'
+              className='bg-background border-input focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground resize-none'
             />
           </div>
           <div className='grid grid-cols-2 gap-4'>
             <div>
-              <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+              <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
                 Assignees
               </label>
               <Select
@@ -256,22 +256,22 @@ export function EditTaskDialog({
                   borderRadius: 12,
                   colors: {
                     ...theme.colors,
-                    primary25: '#334155',
+                    primary25: 'var(--muted)',
                     primary: '#6366f1',
-                    neutral0: '#0f172a',
-                    neutral80: '#cbd5e1',
+                    neutral0: 'var(--popover)',
+                    neutral80: 'var(--popover-foreground)',
                   },
                 })}
               />
             </div>
             <div>
-              <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+              <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
                 Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className='w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-300 transition-colors'>
+                className='w-full px-3 py-2 rounded-lg bg-background border border-input focus:border-indigo-500 focus:outline-none text-xs text-foreground transition-colors'>
                 <option value='Todo'>Todo</option>
                 <option value='In Progress'>In Progress</option>
                 <option value='Done'>Done</option>
@@ -279,7 +279,7 @@ export function EditTaskDialog({
             </div>
           </div>
           <div>
-            <label className='block text-xs font-semibold text-slate-400 mb-1.5 font-sans'>
+            <label className='block text-xs font-semibold text-muted-foreground mb-1.5 font-sans'>
               Remark / Reason (Optional)
             </label>
             <Input
@@ -287,13 +287,13 @@ export function EditTaskDialog({
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               placeholder='Explain status change or modification reason'
-              className='bg-slate-950 border-slate-800 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+              className='bg-background border-input focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground'
             />
           </div>
           <Button
             type='submit'
             disabled={submitting}
-            className='w-full bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-xs font-bold py-2.5 rounded-xl cursor-pointer'>
+            className='w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer'>
             {submitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </form>

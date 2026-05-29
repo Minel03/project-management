@@ -21,6 +21,14 @@ The app supports role-based project workspaces, shared task status, multi-assign
 - Admins can manage users, teams, leaders, and team membership from `/admin`. A debounced search bar and paginated results are available on `/admin` to easily manage and search the system users list.
 - Users can only access and view projects that belong to the teams they lead or belong to.
 
+### Theme Support
+
+- Light, dark, and system theme modes are available from the app header.
+- The default theme is `system`, so the UI follows the user's OS color preference until they choose a specific mode.
+- Theme preference is saved locally and restored on future visits.
+- A pre-hydration theme script prevents the page from flashing the wrong theme on load.
+- Theme-aware styling is applied across the dashboard, Kanban board, activity feed, admin console, login/register pages, and reusable dialogs/modals.
+
 ### Kanban Board
 
 - Tasks are grouped into `Todo`, `In Progress`, and `Done`.
@@ -38,7 +46,7 @@ The app supports role-based project workspaces, shared task status, multi-assign
   - Description, assignees, and due date
   - Started-by indicator
   - Comments
-  - Checklist/subtasks with optional individual owners
+  - Checklist/subtasks with optional individual owners selected through a searchable picker
   - Subtask completion toggles
 - Clicking the pencil icon opens the edit task dialog for task metadata only: title, description, assignees, status, due date, and remark.
 
@@ -47,6 +55,7 @@ The app supports role-based project workspaces, shared task status, multi-assign
 - Task creation, status changes, detail edits, comments, and subtask changes are recorded in `change_logs`.
 - The dashboard shows a project activity sidebar.
 - `/activity` provides a global activity feed with search and project filtering.
+- The global activity feed supports the same light/dark/system theme toggle as the dashboard.
 - Admins can see global logs; non-admin users can see logs for projects/tasks they can access.
 - Log remark owners can edit their own remarks.
 
@@ -65,7 +74,7 @@ The app supports role-based project workspaces, shared task status, multi-assign
 
 **Security note (demo only)**
 
-- The `/api/db/init` endpoint and the login-screen DB buttons are provided for demo and assessment convenience. In production this endpoint should be restricted — do not leave it publicly accessible.
+- The `/api/db/init` endpoint and the login-screen DB buttons are provided for demo and assessment convenience. In production this endpoint should be restricted; do not leave it publicly accessible.
 - Recommended: protect the endpoint with authentication and an admin-only check (for example `protect()` + `isAdmin()` middleware). You can also hide the UI buttons in production builds.
 - This repository seeds an admin account during demo initialization so reviewers can authenticate and run the init/seed endpoints safely. Use the seeded admin (`john_doe`) or your own admin user before calling the endpoint.
 
@@ -94,7 +103,7 @@ For preview or development deployments you can set both to `true` to enable the 
 
 ## Technology Stack
 
-- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, Lucide Icons, shadcn-style UI components
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, React Select, Lucide Icons, shadcn-style UI components
 - Backend: Node.js, Express, ESM modules, JWT, bcryptjs, MySQL2
 - Database: MySQL
 
@@ -197,6 +206,16 @@ Available seeded users include:
 6. Moving a task to `In Progress` records the first starter in `started_by`.
 7. Users open the task details view to discuss work through comments or split work through checklist items.
 8. Checklist items can be assigned to individual users and completed independently.
+
+## Theme Behavior
+
+The frontend uses `frontend/src/context/ThemeContext.tsx` for theme state. The supported values are:
+
+- `system`
+- `light`
+- `dark`
+
+If no preference is saved, the app defaults to `system` and follows `prefers-color-scheme`. Choosing a theme stores it in `localStorage` under `theme`. The root layout applies the saved/system theme before hydration to reduce visual flicker.
 
 ## Database Schema Overview
 

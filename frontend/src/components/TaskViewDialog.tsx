@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Select, { SingleValue } from 'react-select';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,11 @@ interface Member {
   email: string;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface TaskViewDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -81,11 +87,71 @@ export function TaskViewDialog({
 }: TaskViewDialogProps) {
   const [comment, setComment] = useState('');
   const [subtaskTitle, setSubtaskTitle] = useState('');
-  const [subtaskAssignee, setSubtaskAssignee] = useState('');
+  const [subtaskAssignee, setSubtaskAssignee] = useState<SelectOption | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const completedSubtasks =
     task?.subtasks?.filter((subtask) => Boolean(subtask.is_done)).length ?? 0;
+
+  const assigneeOptions = members.map((member) => ({
+    value: String(member.id),
+    label: member.username,
+  }));
+
+  const selectStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: 'var(--background)',
+      borderColor: 'var(--input)',
+      minHeight: '2.25rem',
+      borderRadius: '0.5rem',
+      boxShadow: 'none',
+      fontSize: '0.75rem',
+      '&:hover': {
+        borderColor: '#6366f1',
+      },
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: 'var(--popover)',
+      zIndex: 50,
+    }),
+    option: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? 'var(--muted)' : 'var(--popover)',
+      color: 'var(--popover-foreground)',
+      cursor: 'pointer',
+      fontSize: '0.75rem',
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: 'var(--foreground)',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: 'var(--muted-foreground)',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: 'var(--foreground)',
+    }),
+    dropdownIndicator: (provided: any) => ({
+      ...provided,
+      color: 'var(--muted-foreground)',
+      padding: '0 0.5rem',
+    }),
+    clearIndicator: (provided: any) => ({
+      ...provided,
+      color: 'var(--muted-foreground)',
+      padding: '0 0.5rem',
+    }),
+    indicatorSeparator: (provided: any) => ({
+      ...provided,
+      backgroundColor: 'var(--border)',
+    }),
+  };
 
   const formatCommentTimestamp = (timestamp: string) =>
     new Date(timestamp).toLocaleString([], {
@@ -124,10 +190,10 @@ export function TaskViewDialog({
       await onAddSubtask(
         task.id,
         subtaskTitle.trim(),
-        subtaskAssignee ? parseInt(subtaskAssignee, 10) : null,
+        subtaskAssignee ? parseInt(subtaskAssignee.value, 10) : null,
       );
       setSubtaskTitle('');
-      setSubtaskAssignee('');
+      setSubtaskAssignee(null);
     } finally {
       setSubmitting(false);
     }
@@ -137,14 +203,14 @@ export function TaskViewDialog({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className='bg-slate-900 border border-slate-800 text-slate-100 sm:max-w-2xl rounded-3xl p-6 max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-2xl rounded-3xl p-6 max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle className='text-base font-bold text-slate-100'>
+          <DialogTitle className='text-base font-bold text-foreground'>
             {task?.title ?? 'Task Details'}
           </DialogTitle>
           {task ? (
-            <div className='flex flex-wrap items-center gap-2 text-[11px] text-slate-400'>
-              <span className='rounded-md border border-slate-800 bg-slate-950 px-2 py-1 font-semibold'>
+            <div className='flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground'>
+              <span className='rounded-md border border-border bg-background px-2 py-1 font-semibold'>
                 {task.status}
               </span>
               {task.started_by_name ? (
@@ -154,7 +220,7 @@ export function TaskViewDialog({
                 </span>
               ) : null}
               {task.due_date ? (
-                <span className='inline-flex items-center gap-1 rounded-md border border-amber-500/20 bg-amber-950/30 px-2 py-1 font-semibold text-amber-300'>
+                <span className='inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-amber-100 px-2 py-1 font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300'>
                   <CalendarDays className='h-3 w-3' />
                   Due {formatDueDate(task.due_date)}
                 </span>
@@ -165,11 +231,11 @@ export function TaskViewDialog({
 
         {task ? (
           <>
-            <div className='rounded-xl border border-slate-800 bg-slate-950/60 p-4'>
-              <p className='text-xs leading-relaxed text-slate-300'>
+            <div className='rounded-xl border border-border bg-background/60 p-4'>
+              <p className='text-xs leading-relaxed text-foreground/85'>
                 {task.description || 'No description.'}
               </p>
-              <p className='mt-3 text-[10px] text-slate-500'>
+              <p className='mt-3 text-[10px] text-muted-foreground'>
                 Assignees:{' '}
                 {task.assignees?.length
                   ? task.assignees.map((assignee) => assignee.username).join(', ')
@@ -178,13 +244,13 @@ export function TaskViewDialog({
             </div>
 
             <div className='grid gap-4 md:grid-cols-2'>
-              <section className='rounded-xl border border-slate-800 bg-slate-950/60 p-4'>
+              <section className='rounded-xl border border-border bg-background/60 p-4'>
                 <div className='mb-3 flex items-center justify-between'>
-                  <div className='flex items-center gap-2 text-xs font-bold text-slate-200'>
+                  <div className='flex items-center gap-2 text-xs font-bold text-foreground'>
                     <CheckSquare className='h-4 w-4 text-emerald-400' />
                     Checklist
                   </div>
-                  <span className='text-[10px] text-slate-500'>
+                  <span className='text-[10px] text-muted-foreground'>
                     {completedSubtasks}/{task.subtasks?.length ?? 0}
                   </span>
                 </div>
@@ -193,7 +259,7 @@ export function TaskViewDialog({
                   {(task.subtasks ?? []).map((subtask) => (
                     <label
                       key={subtask.id}
-                      className='flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs text-slate-300'>
+                      className='flex items-start gap-2 rounded-lg border border-border bg-card/60 p-2 text-xs text-foreground/85'>
                       <input
                         type='checkbox'
                         checked={Boolean(subtask.is_done)}
@@ -210,13 +276,13 @@ export function TaskViewDialog({
                         <span
                           className={
                             Boolean(subtask.is_done)
-                              ? 'block text-slate-500 line-through'
+                              ? 'block text-muted-foreground line-through'
                               : 'block'
                           }>
                           {subtask.title}
                         </span>
                         {subtask.assignee_name ? (
-                          <span className='text-[10px] text-slate-500'>
+                          <span className='text-[10px] text-muted-foreground'>
                             {subtask.assignee_name}
                           </span>
                         ) : null}
@@ -231,22 +297,32 @@ export function TaskViewDialog({
                     value={subtaskTitle}
                     onChange={(e) => setSubtaskTitle(e.target.value)}
                     placeholder='Add checklist item'
-                    className='bg-slate-950 border-slate-800 text-xs text-slate-200'
+                    className='bg-background border-input text-xs text-foreground'
                   />
                   <div className='flex gap-2'>
-                    <select
+                    <Select
+                      isClearable
+                      options={assigneeOptions}
                       value={subtaskAssignee}
-                      onChange={(e) => setSubtaskAssignee(e.target.value)}
-                      className='min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-950 px-2 py-2 text-xs text-slate-300'>
-                      <option value=''>No owner</option>
-                      {members.map((member) => (
-                        <option
-                          key={member.id}
-                          value={member.id}>
-                          {member.username}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(selected: SingleValue<SelectOption>) =>
+                        setSubtaskAssignee(selected)
+                      }
+                      placeholder='No owner'
+                      styles={selectStyles}
+                      className='min-w-0 flex-1 text-xs'
+                      classNamePrefix='react-select'
+                      theme={(theme) => ({
+                        ...theme,
+                        borderRadius: 8,
+                        colors: {
+                          ...theme.colors,
+                          primary25: 'var(--muted)',
+                          primary: '#6366f1',
+                          neutral0: 'var(--popover)',
+                          neutral80: 'var(--popover-foreground)',
+                        },
+                      })}
+                    />
                     <Button
                       type='button'
                       onClick={handleAddSubtask}
@@ -258,28 +334,28 @@ export function TaskViewDialog({
                 </div>
               </section>
 
-              <section className='rounded-xl border border-slate-800 bg-slate-950/60 p-4'>
-                <div className='mb-3 flex items-center gap-2 text-xs font-bold text-slate-200'>
+              <section className='rounded-xl border border-border bg-background/60 p-4'>
+                <div className='mb-3 flex items-center gap-2 text-xs font-bold text-foreground'>
                   <MessageSquare className='h-4 w-4 text-indigo-400' />
                   Comments
                 </div>
                 <div className='max-h-56 space-y-3 overflow-y-auto pr-1'>
                   {(task.comments ?? []).length === 0 ? (
-                    <p className='text-xs text-slate-500'>No comments yet.</p>
+                    <p className='text-xs text-muted-foreground'>No comments yet.</p>
                   ) : (
                     (task.comments ?? []).map((taskComment) => (
                       <div
                         key={taskComment.id}
-                        className='rounded-lg border border-slate-800 bg-slate-900/60 p-3'>
-                        <div className='mb-1 flex items-center justify-between text-[10px] text-slate-500'>
-                          <span className='font-semibold text-slate-300'>
+                        className='rounded-lg border border-border bg-card/60 p-3'>
+                        <div className='mb-1 flex items-center justify-between text-[10px] text-muted-foreground'>
+                          <span className='font-semibold text-foreground/85'>
                             {taskComment.username}
                           </span>
                           <span>
                             {formatCommentTimestamp(taskComment.created_at)}
                           </span>
                         </div>
-                        <p className='text-xs leading-relaxed text-slate-300'>
+                        <p className='text-xs leading-relaxed text-foreground/85'>
                           {taskComment.comment}
                         </p>
                       </div>
@@ -292,7 +368,7 @@ export function TaskViewDialog({
                     onChange={(e) => setComment(e.target.value)}
                     placeholder='Add a comment...'
                     rows={2}
-                    className='bg-slate-950 border-slate-800 text-xs text-slate-200 resize-none'
+                    className='bg-background border-input text-xs text-foreground resize-none'
                   />
                   <Button
                     type='button'

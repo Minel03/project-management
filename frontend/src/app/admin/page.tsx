@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,9 @@ import {
   Plus,
   Search,
   Trash2,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 
 interface UserSummary {
@@ -39,6 +43,7 @@ interface TeamDetails extends TeamSummary {
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
+  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
@@ -66,6 +71,12 @@ export default function AdminPage() {
     null,
   );
   const [saving, setSaving] = useState(false);
+
+  const cycleTheme = () => {
+    if (theme === 'system') setTheme('light');
+    else if (theme === 'light') setTheme('dark');
+    else setTheme('system');
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -316,32 +327,44 @@ export default function AdminPage() {
 
   if (authLoading || !user) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-slate-950'>
+      <div className='min-h-screen flex items-center justify-center bg-background text-foreground'>
         <Loader2 className='w-8 h-8 text-indigo-500 animate-spin' />
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans'>
-      <header className='sticky top-0 z-20 shrink-0 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4'>
+    <div className='min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-200'>
+      <header className='sticky top-0 z-20 shrink-0 border-b border-border bg-card/85 backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 transition-colors duration-200'>
         <div className='flex items-center gap-3'>
           <Button
             variant='ghost'
             size='icon'
             onClick={() => router.push('/')}
-            className='text-slate-400 hover:text-slate-100 cursor-pointer'>
+            className='text-muted-foreground hover:text-foreground cursor-pointer'>
             <ArrowLeft className='w-4 h-4' />
           </Button>
           <div>
-            <h1 className='text-base font-bold tracking-tight text-slate-100'>
+            <h1 className='text-base font-bold tracking-tight text-foreground'>
               Admin Console
             </h1>
-            <p className='text-[10px] text-slate-500'>
+            <p className='text-[10px] text-muted-foreground'>
               Manage system users, teams, and access levels.
             </p>
           </div>
         </div>
+
+        <button
+          onClick={cycleTheme}
+          className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'
+          title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Click to toggle)`}>
+          {theme === 'light' && <Sun className='w-3.5 h-3.5' />}
+          {theme === 'dark' && <Moon className='w-3.5 h-3.5' />}
+          {theme === 'system' && <Monitor className='w-3.5 h-3.5' />}
+          <span className='hidden sm:inline font-sans capitalize'>
+            {theme === 'system' ? 'System Theme' : `${theme} Mode`}
+          </span>
+        </button>
       </header>
 
       <main className='flex-1 max-w-4xl w-full mx-auto p-6 space-y-6'>
@@ -352,50 +375,50 @@ export default function AdminPage() {
         )}
 
         <section className='grid gap-6'>
-          <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
+          <div className='rounded-3xl border border-border bg-card/70 p-6 transition-colors'>
             <div className='flex items-center gap-3 mb-5'>
               <ShieldCheck className='w-5 h-5 text-emerald-400' />
               <div>
-                <h2 className='text-lg font-semibold text-slate-100'>
+                <h2 className='text-lg font-semibold text-foreground'>
                   Create a new user
                 </h2>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground'>
                   Admins can create system users and assign roles.
                 </p>
               </div>
             </div>
 
             <div className='grid gap-4'>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Username</span>
                 <input
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
-                  className='rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  className='rounded-2xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
                   placeholder='john_doe'
                 />
               </label>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Email</span>
                 <input
                   type='email'
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
-                  className='rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  className='rounded-2xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
                   placeholder='john@example.com'
                 />
               </label>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Password</span>
                 <input
                   type='password'
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  className='rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  className='rounded-2xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
                   placeholder='Create a password'
                 />
               </label>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Role</span>
                 <select
                   value={newUserRole}
@@ -404,7 +427,7 @@ export default function AdminPage() {
                       e.target.value as 'admin' | 'leader' | 'member',
                     )
                   }
-                  className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+                  className='h-10 rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                   <option value='member'>Member</option>
                   <option value='leader'>Leader</option>
                   <option value='admin'>Admin</option>
@@ -414,44 +437,44 @@ export default function AdminPage() {
                 <Button
                   onClick={handleCreateUser}
                   disabled={saving}
-                  className='cursor-pointer hover:bg-gray-400'>
+                  className='cursor-pointer'>
                   <Plus className='mr-2 h-4 w-4' /> Create User
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
+          <div className='rounded-3xl border border-border bg-card/70 p-6 transition-colors'>
             <div className='flex items-center gap-3 mb-5'>
               <FolderPlus className='w-5 h-5 text-cyan-400' />
               <div>
-                <h2 className='text-lg font-semibold text-slate-100'>
+                <h2 className='text-lg font-semibold text-foreground'>
                   Create a new team
                 </h2>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground'>
                   Select a leader and initialize membership for a team.
                 </p>
               </div>
             </div>
 
             <div className='grid gap-4'>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Team name</span>
                 <input
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  className='rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+                  className='rounded-2xl border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
                   placeholder='Alpha Squad'
                 />
               </label>
-              <label className='grid gap-2 text-sm'>
+              <label className='grid gap-2 text-sm text-foreground'>
                 <span>Team leader</span>
                 <select
                   value={newTeamLeader ?? ''}
                   onChange={(e) =>
                     setNewTeamLeader(parseInt(e.target.value, 10))
                   }
-                  className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+                  className='h-10 rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                   <option
                     value=''
                     disabled>
@@ -470,7 +493,7 @@ export default function AdminPage() {
                 <Button
                   onClick={handleCreateTeam}
                   disabled={saving}
-                  className='cursor-pointer hover:bg-gray-400'>
+                  className='cursor-pointer'>
                   <Plus className='mr-2 h-4 w-4' /> Create Team
                 </Button>
               </div>
@@ -479,27 +502,27 @@ export default function AdminPage() {
         </section>
 
         <section className='grid gap-6'>
-          <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
+          <div className='rounded-3xl border border-border bg-card/70 p-6 transition-colors'>
             <div className='flex items-center gap-3 mb-5'>
               <Users className='w-5 h-5 text-violet-400' />
               <div>
-                <h2 className='text-lg font-semibold text-slate-100'>
+                <h2 className='text-lg font-semibold text-foreground'>
                   System users
                 </h2>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground'>
                   All accounts in the system with current roles.
                 </p>
               </div>
             </div>
             {/* Search bar */}
             <div className='relative mb-4'>
-              <Search className='absolute left-3 top-2.5 w-4 h-4 text-slate-500 pointer-events-none' />
+              <Search className='absolute left-3 top-2.5 w-4 h-4 text-muted-foreground pointer-events-none' />
               <Input
                 type='text'
                 placeholder='Search by username or email...'
                 value={userSearch}
                 onChange={(e) => handleUserSearch(e.target.value)}
-                className='pl-9 rounded-2xl border-slate-800 bg-slate-950 focus:border-indigo-500 focus:ring-indigo-500 text-xs text-slate-200'
+                className='pl-9 rounded-2xl border-input bg-background focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground'
               />
             </div>
 
@@ -511,19 +534,19 @@ export default function AdminPage() {
               <div>
                 <div className='space-y-3'>
                   {users.length === 0 ? (
-                    <p className='text-sm text-slate-500'>
+                    <p className='text-sm text-muted-foreground'>
                       {userSearch.trim() ? `No users matching "${userSearch.trim()}"` : 'No users found.'}
                     </p>
                   ) : (
                     users.map((account) => (
                       <div
                         key={account.id}
-                        className='grid gap-3 rounded-3xl border border-slate-800 bg-slate-950/60 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center'>
+                        className='grid gap-3 rounded-3xl border border-border bg-background/60 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center'>
                         <div>
-                          <p className='font-semibold text-slate-100'>
+                          <p className='font-semibold text-foreground'>
                             {account.username}
                           </p>
-                          <p className='text-xs text-slate-500'>
+                          <p className='text-xs text-muted-foreground'>
                             {account.email}
                           </p>
                         </div>
@@ -535,7 +558,7 @@ export default function AdminPage() {
                               e.target.value as 'admin' | 'leader' | 'member',
                             )
                           }
-                          className='h-10 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+                          className='h-10 rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                           <option value='member'>member</option>
                           <option value='leader'>leader</option>
                           <option value='admin'>admin</option>
@@ -554,13 +577,13 @@ export default function AdminPage() {
 
                 {/* Pagination Controls */}
                 {!usersLoading && totalPages > 1 && (
-                  <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-800/80'>
-                    <p className='text-xs text-slate-500'>
-                      Showing <span className='font-semibold text-slate-300'>{(currentPage - 1) * usersLimit + 1}</span> to{' '}
-                      <span className='font-semibold text-slate-300'>
+                  <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-border'>
+                    <p className='text-xs text-muted-foreground'>
+                      Showing <span className='font-semibold text-foreground/80'>{(currentPage - 1) * usersLimit + 1}</span> to{' '}
+                      <span className='font-semibold text-foreground/80'>
                         {Math.min(currentPage * usersLimit, totalUsers)}
                       </span> of{' '}
-                      <span className='font-semibold text-slate-300'>{totalUsers}</span> users
+                      <span className='font-semibold text-foreground/80'>{totalUsers}</span> users
                     </p>
                     <div className='flex items-center gap-2'>
                       <Button
@@ -568,7 +591,7 @@ export default function AdminPage() {
                         size='sm'
                         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
+                        className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
                         Previous
                       </Button>
                       <div className='flex items-center gap-1'>
@@ -578,8 +601,8 @@ export default function AdminPage() {
                             onClick={() => setCurrentPage(page)}
                             className={`w-8 h-8 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                               currentPage === page
-                                ? 'bg-indigo-600 text-slate-100'
-                                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-muted'
                             }`}>
                             {page}
                           </button>
@@ -590,7 +613,7 @@ export default function AdminPage() {
                         size='sm'
                         onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                        className='rounded-xl border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
+                        className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
                         Next
                       </Button>
                     </div>
@@ -600,12 +623,12 @@ export default function AdminPage() {
             )}
           </div>
 
-          <div className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
+          <div className='rounded-3xl border border-border bg-card/70 p-6 transition-colors'>
             <div className='flex items-center gap-3 mb-5'>
               <ShieldCheck className='w-5 h-5 text-cyan-400' />
               <div>
-                <h2 className='text-lg font-semibold text-slate-100'>Teams</h2>
-                <p className='text-xs text-slate-500'>
+                <h2 className='text-lg font-semibold text-foreground'>Teams</h2>
+                <p className='text-xs text-muted-foreground'>
                   Create and inspect teams, then assign or remove members.
                 </p>
               </div>
@@ -617,7 +640,7 @@ export default function AdminPage() {
             ) : (
               <div className='space-y-3'>
                 {teams.length === 0 ? (
-                  <p className='text-sm text-slate-500'>No teams available.</p>
+                  <p className='text-sm text-muted-foreground'>No teams available.</p>
                 ) : (
                   teams.map((team) => (
                     <button
@@ -627,18 +650,18 @@ export default function AdminPage() {
                       className={`w-full rounded-3xl border p-4 text-left transition-all cursor-pointer ${
                         selectedTeam?.id === team.id
                           ? 'border-cyan-500/40 bg-cyan-500/10'
-                          : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'
+                          : 'border-border bg-background/50 hover:border-foreground/15'
                       }`}>
                       <div className='flex items-center justify-between gap-3'>
                         <div>
-                          <p className='font-semibold text-slate-100'>
+                          <p className='font-semibold text-foreground'>
                             {team.name}
                           </p>
-                          <p className='text-xs text-slate-500'>
+                          <p className='text-xs text-muted-foreground'>
                             Leader: {team.leader_name}
                           </p>
                         </div>
-                        <Plus className='w-4 h-4 text-slate-400' />
+                        <Plus className='w-4 h-4 text-muted-foreground' />
                       </div>
                     </button>
                   ))
@@ -649,41 +672,41 @@ export default function AdminPage() {
         </section>
 
         {selectedTeam && (
-          <section className='rounded-3xl border border-slate-800 bg-slate-900/70 p-6'>
+          <section className='rounded-3xl border border-border bg-card/70 p-6 transition-colors'>
             <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
               <div>
-                <h2 className='text-lg font-semibold text-slate-100'>
+                <h2 className='text-lg font-semibold text-foreground'>
                   {selectedTeam.name}
                 </h2>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground'>
                   Leader: {selectedTeam.leader_name}
                 </p>
               </div>
               <div className='flex items-center gap-2'>
-                <span className='rounded-full bg-slate-950 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-400'>
+                <span className='rounded-full bg-muted px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground'>
                   Team Details
                 </span>
               </div>
             </div>
 
             <div className='mt-5 grid gap-4 md:grid-cols-[1fr_1fr]'>
-              <div className='rounded-3xl border border-slate-800 bg-slate-950/80 p-4'>
-                <p className='text-sm font-semibold text-slate-100 mb-3'>
+              <div className='rounded-3xl border border-border bg-background/80 p-4'>
+                <p className='text-sm font-semibold text-foreground mb-3'>
                   Members
                 </p>
                 {selectedTeam.members.length === 0 ? (
-                  <p className='text-sm text-slate-500'>No members yet.</p>
+                  <p className='text-sm text-muted-foreground'>No members yet.</p>
                 ) : (
                   <div className='space-y-3'>
                     {selectedTeam.members.map((member) => (
                       <div
                         key={member.id}
-                        className='flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3'>
+                        className='flex items-center justify-between rounded-2xl border border-border bg-card/80 px-4 py-3'>
                         <div>
-                          <p className='font-medium text-slate-100'>
+                          <p className='font-medium text-foreground'>
                             {member.username}
                           </p>
-                          <p className='text-xs text-slate-500'>
+                          <p className='text-xs text-muted-foreground'>
                             {member.email}
                           </p>
                         </div>
@@ -700,8 +723,8 @@ export default function AdminPage() {
                 )}
               </div>
 
-              <div className='rounded-3xl border border-slate-800 bg-slate-950/80 p-4'>
-                <p className='text-sm font-semibold text-slate-100 mb-3'>
+              <div className='rounded-3xl border border-border bg-background/80 p-4'>
+                <p className='text-sm font-semibold text-foreground mb-3'>
                   Add member
                 </p>
                 <select
@@ -709,7 +732,7 @@ export default function AdminPage() {
                   onChange={(e) =>
                     setSelectedMemberToAdd(parseInt(e.target.value, 10) || null)
                   }
-                  className='h-10 w-full rounded-2xl border border-slate-800 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
+                  className='h-10 w-full rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'>
                   <option value=''>Select a user</option>
                   {allUsers
                     .filter(
