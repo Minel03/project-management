@@ -76,10 +76,16 @@ This project is a full-stack project management tool built as a developer assess
 - Recommended: protect the endpoint with authentication and an admin-only check (for example `protect()` + `isAdmin()` middleware). You can also hide the UI buttons in production builds.
 - This repository seeds an admin account during demo initialization so reviewers can authenticate and run the init/seed endpoints safely. Use the seeded admin (`john_doe`) or your own admin user before calling the endpoint.
 
-Example curl (run as admin with a JWT):
+Example — local (no auth required):
 
 ```bash
-curl -X GET "http://localhost:5000/api/db/init?reset=true" \
+curl http://localhost:5000/api/db/init?reset=true
+```
+
+Example — deployed (auth required if endpoint is protected):
+
+```bash
+curl -X GET "https://your-backend-url/api/db/init?reset=true" \
   -H "Authorization: Bearer <ADMIN_JWT>"
 ```
 
