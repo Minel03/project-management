@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import Select, { MultiValue } from 'react-select';
+import Select, {
+  MultiValue,
+  StylesConfig,
+  CSSObjectWithLabel,
+  OptionProps,
+} from 'react-select';
 import {
   Dialog,
   DialogContent,
@@ -52,8 +57,8 @@ export function CreateTaskDialog({
     label: m.username,
   }));
 
-  const selectStyles = {
-    control: (provided: any) => ({
+  const selectStyles: StylesConfig<SelectOption, true> = {
+    control: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--background)',
       borderColor: 'var(--input)',
@@ -63,27 +68,30 @@ export function CreateTaskDialog({
         borderColor: '#6366f1',
       },
     }),
-    menu: (provided: any) => ({
+    menu: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--popover)',
       zIndex: 50,
     }),
-    option: (provided: any, state: any) => ({
+    option: (
+      provided: CSSObjectWithLabel,
+      state: OptionProps<SelectOption, true>,
+    ) => ({
       ...provided,
       backgroundColor: state.isFocused ? 'var(--muted)' : 'var(--popover)',
       color: 'var(--popover-foreground)',
       cursor: 'pointer',
     }),
-    multiValue: (provided: any) => ({
+    multiValue: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--muted)',
     }),
-    multiValueLabel: (provided: any) => ({
+    multiValueLabel: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
       fontSize: '0.75rem',
     }),
-    multiValueRemove: (provided: any) => ({
+    multiValueRemove: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
       ':hover': {
@@ -91,11 +99,11 @@ export function CreateTaskDialog({
         color: 'var(--accent-foreground)',
       },
     }),
-    placeholder: (provided: any) => ({
+    placeholder: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
     }),
-    input: (provided: any) => ({
+    input: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
     }),
@@ -201,7 +209,9 @@ export function CreateTaskDialog({
               </label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                onChange={(e) =>
+                  setStatus(e.target.value as 'Todo' | 'In Progress' | 'Done')
+                }
                 className='w-full px-3 py-2 rounded-lg bg-background border border-input focus:border-indigo-500 focus:outline-none text-xs text-foreground transition-colors'>
                 <option value='Todo'>Todo</option>
                 <option value='In Progress'>In Progress</option>

@@ -7,7 +7,6 @@ import { useTheme } from '@/context/ThemeContext';
 import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getInitials } from '@/lib/utils';
 import {
   ArrowLeft,
   Loader2,
@@ -40,6 +39,20 @@ interface TeamSummary {
 interface TeamDetails extends TeamSummary {
   members: UserSummary[];
 }
+
+const getErrorMessage = (err: unknown, fallback: string): string => {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'response' in err &&
+    typeof (err as { response?: { data?: { message?: string } } }).response
+      ?.data?.message === 'string'
+  ) {
+    return (err as { response: { data: { message: string } } }).response.data
+      .message;
+  }
+  return fallback;
+};
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -92,7 +105,9 @@ export default function AdminPage() {
     }
   }, [authLoading, user, router]);
 
-  const leaderCandidates = allUsers.filter((account) => account.role === 'leader');
+  const leaderCandidates = allUsers.filter(
+    (account) => account.role === 'leader',
+  );
 
   const loadAdminData = async (page = currentPage, search = userSearch) => {
     setError(null);
@@ -100,7 +115,9 @@ export default function AdminPage() {
     setTeamsLoading(true);
 
     try {
-      const searchParam = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : '';
+      const searchParam = search.trim()
+        ? `&search=${encodeURIComponent(search.trim())}`
+        : '';
       const [usersRes, paginatedUsersRes, teamsRes] = await Promise.all([
         api.get('/api/users'),
         api.get(`/api/users?page=${page}&limit=${usersLimit}${searchParam}`),
@@ -125,11 +142,9 @@ export default function AdminPage() {
       if (teamsRes.data.success) {
         setTeams(teamsRes.data.data.allTeams || []);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Admin data fetch failed:', err);
-      setError(
-        err?.response?.data?.message || 'Unable to load admin console data.',
-      );
+      setError(getErrorMessage(err, 'Unable to load admin console data.'));
     } finally {
       setUsersLoading(false);
       setTeamsLoading(false);
@@ -147,9 +162,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (user && user.role === 'admin') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadAdminData(currentPage);
     }
-  }, [currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, user]);
 
   const loadTeamDetails = async (teamId: number) => {
     try {
@@ -200,9 +217,9 @@ export default function AdminPage() {
           setCurrentPage(1);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Create user failed:', err);
-      setError(err?.response?.data?.message || 'Could not create user.');
+      setError(getErrorMessage(err, 'Could not create user.'));
     } finally {
       setSaving(false);
     }
@@ -233,9 +250,9 @@ export default function AdminPage() {
         setNewTeamName('');
         setNewTeamLeader(null);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Create team failed:', err);
-      setError(err?.response?.data?.message || 'Could not create team.');
+      setError(getErrorMessage(err, 'Could not create team.'));
     } finally {
       setSaving(false);
     }
@@ -251,9 +268,9 @@ export default function AdminPage() {
       if (res.data.success) {
         loadAdminData(currentPage);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Update role failed:', err);
-      setError(err?.response?.data?.message || 'Unable to update user role.');
+      setError(getErrorMessage(err, 'Unable to update user role.'));
     } finally {
       setSaving(false);
     }
@@ -282,9 +299,9 @@ export default function AdminPage() {
           ),
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Delete user failed:', err);
-      setError(err?.response?.data?.message || 'Unable to delete user.');
+      setError(getErrorMessage(err, 'Unable to delete user.'));
     } finally {
       setSaving(false);
     }
@@ -303,9 +320,9 @@ export default function AdminPage() {
       });
       await loadTeamDetails(selectedTeam.id);
       setSelectedMemberToAdd(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Add member failed:', err);
-      setError(err?.response?.data?.message || 'Unable to add member.');
+      setError(getErrorMessage(err, 'Unable to add member.'));
     } finally {
       setSaving(false);
     }
@@ -317,9 +334,9 @@ export default function AdminPage() {
       setSaving(true);
       await api.delete(`/api/teams/${selectedTeam.id}/members/${memberId}`);
       await loadTeamDetails(selectedTeam.id);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Remove member failed:', err);
-      setError(err?.response?.data?.message || 'Unable to remove member.');
+      setError(getErrorMessage(err, 'Unable to remove member.'));
     } finally {
       setSaving(false);
     }
@@ -535,7 +552,11 @@ export default function AdminPage() {
                 <div className='space-y-3'>
                   {users.length === 0 ? (
                     <p className='text-sm text-muted-foreground'>
-                      {userSearch.trim() ? `No users matching "${userSearch.trim()}"` : 'No users found.'}
+                      {userSearch.trim() ? (
+                        <>No users matching &quot;{userSearch.trim()}&quot;</>
+                      ) : (
+                        'No users found.'
+                      )}
                     </p>
                   ) : (
                     users.map((account) => (
@@ -579,23 +600,36 @@ export default function AdminPage() {
                 {!usersLoading && totalPages > 1 && (
                   <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-border'>
                     <p className='text-xs text-muted-foreground'>
-                      Showing <span className='font-semibold text-foreground/80'>{(currentPage - 1) * usersLimit + 1}</span> to{' '}
+                      Showing{' '}
+                      <span className='font-semibold text-foreground/80'>
+                        {(currentPage - 1) * usersLimit + 1}
+                      </span>{' '}
+                      to{' '}
                       <span className='font-semibold text-foreground/80'>
                         {Math.min(currentPage * usersLimit, totalUsers)}
-                      </span> of{' '}
-                      <span className='font-semibold text-foreground/80'>{totalUsers}</span> users
+                      </span>{' '}
+                      of{' '}
+                      <span className='font-semibold text-foreground/80'>
+                        {totalUsers}
+                      </span>{' '}
+                      users
                     </p>
                     <div className='flex items-center gap-2'>
                       <Button
                         variant='outline'
                         size='sm'
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 1))
+                        }
                         disabled={currentPage === 1}
                         className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
                         Previous
                       </Button>
                       <div className='flex items-center gap-1'>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1,
+                        ).map((page) => (
                           <button
                             key={page}
                             onClick={() => setCurrentPage(page)}
@@ -611,7 +645,11 @@ export default function AdminPage() {
                       <Button
                         variant='outline'
                         size='sm'
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(prev + 1, totalPages),
+                          )
+                        }
                         disabled={currentPage === totalPages}
                         className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer disabled:opacity-50 disabled:pointer-events-none'>
                         Next
@@ -640,7 +678,9 @@ export default function AdminPage() {
             ) : (
               <div className='space-y-3'>
                 {teams.length === 0 ? (
-                  <p className='text-sm text-muted-foreground'>No teams available.</p>
+                  <p className='text-sm text-muted-foreground'>
+                    No teams available.
+                  </p>
                 ) : (
                   teams.map((team) => (
                     <button
@@ -695,7 +735,9 @@ export default function AdminPage() {
                   Members
                 </p>
                 {selectedTeam.members.length === 0 ? (
-                  <p className='text-sm text-muted-foreground'>No members yet.</p>
+                  <p className='text-sm text-muted-foreground'>
+                    No members yet.
+                  </p>
                 ) : (
                   <div className='space-y-3'>
                     {selectedTeam.members.map((member) => (

@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import Select, { SingleValue } from 'react-select';
+import Select, {
+  SingleValue,
+  StylesConfig,
+  CSSObjectWithLabel,
+  OptionProps,
+} from 'react-select';
 import {
   Dialog,
   DialogContent,
@@ -100,8 +105,8 @@ export function TaskViewDialog({
     label: member.username,
   }));
 
-  const selectStyles = {
-    control: (provided: any) => ({
+  const selectStyles: StylesConfig<SelectOption, false> = {
+    control: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--background)',
       borderColor: 'var(--input)',
@@ -113,41 +118,44 @@ export function TaskViewDialog({
         borderColor: '#6366f1',
       },
     }),
-    menu: (provided: any) => ({
+    menu: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--popover)',
       zIndex: 50,
     }),
-    option: (provided: any, state: any) => ({
+    option: (
+      provided: CSSObjectWithLabel,
+      state: OptionProps<SelectOption, false>,
+    ) => ({
       ...provided,
       backgroundColor: state.isFocused ? 'var(--muted)' : 'var(--popover)',
       color: 'var(--popover-foreground)',
       cursor: 'pointer',
       fontSize: '0.75rem',
     }),
-    singleValue: (provided: any) => ({
+    singleValue: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
     }),
-    placeholder: (provided: any) => ({
+    placeholder: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
     }),
-    input: (provided: any) => ({
+    input: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
     }),
-    dropdownIndicator: (provided: any) => ({
+    dropdownIndicator: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
       padding: '0 0.5rem',
     }),
-    clearIndicator: (provided: any) => ({
+    clearIndicator: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
       padding: '0 0.5rem',
     }),
-    indicatorSeparator: (provided: any) => ({
+    indicatorSeparator: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--border)',
     }),
@@ -238,7 +246,9 @@ export function TaskViewDialog({
               <p className='mt-3 text-[10px] text-muted-foreground'>
                 Assignees:{' '}
                 {task.assignees?.length
-                  ? task.assignees.map((assignee) => assignee.username).join(', ')
+                  ? task.assignees
+                      .map((assignee) => assignee.username)
+                      .join(', ')
                   : 'Unassigned'}
               </p>
             </div>
@@ -264,11 +274,7 @@ export function TaskViewDialog({
                         type='checkbox'
                         checked={Boolean(subtask.is_done)}
                         onChange={(e) =>
-                          onToggleSubtask(
-                            task.id,
-                            subtask.id,
-                            e.target.checked,
-                          )
+                          onToggleSubtask(task.id, subtask.id, e.target.checked)
                         }
                         className='mt-0.5 h-3.5 w-3.5 accent-emerald-500'
                       />
@@ -341,7 +347,9 @@ export function TaskViewDialog({
                 </div>
                 <div className='max-h-56 space-y-3 overflow-y-auto pr-1'>
                   {(task.comments ?? []).length === 0 ? (
-                    <p className='text-xs text-muted-foreground'>No comments yet.</p>
+                    <p className='text-xs text-muted-foreground'>
+                      No comments yet.
+                    </p>
                   ) : (
                     (task.comments ?? []).map((taskComment) => (
                       <div

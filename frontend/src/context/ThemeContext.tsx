@@ -20,9 +20,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system');
 
   useEffect(() => {
-    // Load theme from localStorage if it exists
     const savedTheme = localStorage.getItem('theme');
     if (isTheme(savedTheme)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(savedTheme);
     }
   }, []);
@@ -33,7 +33,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const root = document.documentElement;
     if (newTheme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light';
       if (systemTheme === 'dark') {
         root.classList.add('dark');
       } else {
@@ -69,9 +72,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     const savedTheme = localStorage.getItem('theme');
     const currentTheme = isTheme(savedTheme) ? savedTheme : 'system';
-    
+
     if (currentTheme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light';
       if (systemTheme === 'dark') {
         root.classList.add('dark');
       } else {

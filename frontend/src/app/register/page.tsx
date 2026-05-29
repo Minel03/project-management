@@ -34,119 +34,133 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     try {
       await register(username, email, password);
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 transition-colors duration-200">
-      <div className="w-full max-w-sm space-y-5">
-
+    <main className='min-h-screen bg-background text-foreground flex items-center justify-center px-4 transition-colors duration-200'>
+      <div className='w-full max-w-sm space-y-5'>
         {/* Logo */}
-        <div className="mb-2">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm font-bold text-white">
+        <div className='mb-2'>
+          <div className='flex items-center gap-2.5 mb-4'>
+            <div className='w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm font-bold text-white'>
               A
             </div>
-            <span className="text-base font-semibold text-foreground tracking-tight">PM Tool</span>
+            <span className='text-base font-semibold text-foreground tracking-tight'>
+              PM Tool
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Create account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Fill in the details below to get started.</p>
+          <h1 className='text-2xl font-bold text-foreground tracking-tight'>
+            Create account
+          </h1>
+          <p className='text-sm text-muted-foreground mt-1'>
+            Fill in the details below to get started.
+          </p>
         </div>
 
         {/* Register Form */}
-        <div className="rounded-lg border border-border bg-card p-5 space-y-4 transition-colors">
+        <div className='rounded-lg border border-border bg-card p-5 space-y-4 transition-colors'>
           {error && (
-            <div className="flex items-center gap-2 p-2.5 rounded-md bg-red-950/40 border border-red-800 text-red-300 text-xs">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <div className='flex items-center gap-2 p-2.5 rounded-md bg-red-950/40 border border-red-800 text-red-300 text-xs'>
+              <AlertCircle className='w-3.5 h-3.5 shrink-0' />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className='space-y-4'>
             <div>
-              <label htmlFor="username" className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label
+                htmlFor='username'
+                className='block text-xs font-medium text-muted-foreground mb-1.5'>
                 Username
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <div className='relative'>
+                <User className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground' />
                 <input
-                  id="username"
-                  type="text"
-                  placeholder="john_doe"
+                  id='username'
+                  type='text'
+                  placeholder='john_doe'
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors"
+                  className='w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors'
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label
+                htmlFor='email'
+                className='block text-xs font-medium text-muted-foreground mb-1.5'>
                 Email Address
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <div className='relative'>
+                <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground' />
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="john@example.com"
+                  id='email'
+                  type='email'
+                  placeholder='john@example.com'
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors"
+                  className='w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors'
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label
+                htmlFor='password'
+                className='block text-xs font-medium text-muted-foreground mb-1.5'>
                 Password
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <div className='relative'>
+                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground' />
                 <input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  id='password'
+                  type='password'
+                  placeholder='••••••••'
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors"
+                  className='w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors'
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label
+                htmlFor='confirmPassword'
+                className='block text-xs font-medium text-muted-foreground mb-1.5'>
                 Confirm Password
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <div className='relative'>
+                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground' />
                 <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
+                  id='confirmPassword'
+                  type='password'
+                  placeholder='••••••••'
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors"
+                  className='w-full pl-9 pr-3 py-2 rounded-md bg-background border border-input focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-colors'
                   required
                 />
               </div>
             </div>
 
             <button
-              type="submit"
+              type='submit'
               disabled={isSubmitting}
-              className="w-full py-2 px-4 rounded-md font-medium bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
+              className='w-full py-2 px-4 rounded-md font-medium bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer'>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className='w-4 h-4 animate-spin' />
                   <span>Creating account...</span>
                 </>
               ) : (
@@ -155,9 +169,11 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground pt-3 border-t border-border">
+          <p className='text-center text-xs text-muted-foreground pt-3 border-t border-border'>
             Already have an account?{' '}
-            <Link href="/login" className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors">
+            <Link
+              href='/login'
+              className='text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors'>
               Sign in
             </Link>
           </p>

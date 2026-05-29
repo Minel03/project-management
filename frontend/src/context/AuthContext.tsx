@@ -34,7 +34,7 @@ interface AuthContextType {
   logout: () => void;
   triggerDbInit: (
     reset: boolean,
-  ) => Promise<{ success: boolean; message: string; seeded?: any }>;
+  ) => Promise<{ success: boolean; message: string; seeded?: unknown }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,10 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
         router.push('/');
       }
-    } catch (err: any) {
+    } catch (err) {
       const errorMsg =
-        err.response?.data?.message ||
-        'Login failed. Please check credentials.';
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || 'Login failed. Please check credentials.';
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
@@ -116,8 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
         router.push('/');
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Registration failed.';
+    } catch (err) {
+      const errorMsg =
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || 'Registration failed.';
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
@@ -134,10 +136,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.get(`/api/db/init?reset=${reset}`);
       return res.data;
-    } catch (err: any) {
+    } catch (err) {
       const errorMsg =
-        err.response?.data?.message ||
-        'Database initialization request failed.';
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || 'Database initialization request failed.';
       throw new Error(errorMsg);
     }
   };

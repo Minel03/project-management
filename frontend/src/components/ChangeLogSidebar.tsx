@@ -1,6 +1,4 @@
-import React from 'react';
 import { Clock, CheckSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface ChangeLog {
   id: number;
@@ -38,7 +36,9 @@ export function ChangeLogSidebar({
       {logs.length === 0 ? (
         <div className='text-center py-10'>
           <CheckSquare className='w-6 h-6 text-muted-foreground/40 mx-auto mb-2' />
-          <p className='text-xs text-muted-foreground'>No activity recorded yet.</p>
+          <p className='text-xs text-muted-foreground'>
+            No activity recorded yet.
+          </p>
         </div>
       ) : (
         <div className='relative border-l border-border pl-4 space-y-6'>
@@ -50,7 +50,6 @@ export function ChangeLogSidebar({
             const canEditRemark = log.user_id === currentUserId;
 
             let logText = '';
-            let oldBadge = '';
             let newBadge = '';
 
             if (log.old_status === log.new_status) {
@@ -61,7 +60,6 @@ export function ChangeLogSidebar({
               }
             } else {
               logText = 'moved task to';
-              oldBadge = log.old_status;
               newBadge = log.new_status;
             }
 
@@ -116,7 +114,7 @@ export function ChangeLogSidebar({
 
                 {log.remark && (
                   <p className='text-[10px] text-muted-foreground mt-1 pl-2 border-l border-border italic wrap-break-word'>
-                    "{log.remark}"
+                    &quot;{log.remark}&quot;
                   </p>
                 )}
 

@@ -36,8 +36,8 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(emailOrUsername, password);
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -60,10 +60,12 @@ export default function LoginPage() {
         setDbInitType('error');
         setDbInitMessage(result.message || 'Failed to initialize database.');
       }
-    } catch (err: any) {
+    } catch (err) {
       setDbInitType('error');
       setDbInitMessage(
-        err.message || 'Could not reach backend. Is the server running?',
+        err instanceof Error
+          ? err.message
+          : 'Could not reach backend. Is the server running?',
       );
     } finally {
       setIsDbInitializing(false);

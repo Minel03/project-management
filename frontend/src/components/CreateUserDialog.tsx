@@ -31,6 +31,20 @@ interface CreateUserDialogProps {
   ) => Promise<void>;
 }
 
+const getErrorMessage = (err: unknown, fallback: string): string => {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'response' in err &&
+    typeof (err as { response?: { data?: { message?: string } } }).response
+      ?.data?.message === 'string'
+  ) {
+    return (err as { response: { data: { message: string } } }).response.data
+      .message;
+  }
+  return fallback;
+};
+
 export function CreateUserDialog({
   isOpen,
   onClose,
@@ -59,8 +73,8 @@ export function CreateUserDialog({
       setPassword('');
       setRole('member');
       onClose();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to create user.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to create user.'));
     } finally {
       setSaving(false);
     }
@@ -151,7 +165,9 @@ export function CreateUserDialog({
                     className='flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground'>
                     <div>
                       <p className='font-semibold'>{user.username}</p>
-                      <p className='text-[11px] text-muted-foreground'>{user.email}</p>
+                      <p className='text-[11px] text-muted-foreground'>
+                        {user.email}
+                      </p>
                     </div>
                     <span className='rounded-full bg-muted px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground'>
                       {user.role || 'member'}

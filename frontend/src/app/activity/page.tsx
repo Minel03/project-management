@@ -111,6 +111,7 @@ export default function ActivityPage() {
         router.push('/');
         return;
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchLogsAndProjects();
     }
   }, [user, authLoading, router]);
@@ -356,7 +357,7 @@ export default function ActivityPage() {
                       <div className='mt-2 p-2.5 rounded-lg bg-background border border-border flex items-start gap-2 max-w-xl'>
                         <MessageSquare className='w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0' />
                         <p className='text-xs text-muted-foreground italic font-mono leading-relaxed wrap-break-word'>
-                          "{log.remark}"
+                          &quot;{log.remark}&quot;
                         </p>
                       </div>
                     )}

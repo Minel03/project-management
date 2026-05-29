@@ -46,6 +46,7 @@ interface Project {
   id: number;
   name: string;
   description: string;
+  user_id?: number;
   creator_name: string;
   team_name?: string;
   team_id?: number;
@@ -126,15 +127,15 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
   const [logs, setLogs] = useState<ChangeLog[]>([]);
-  const [assignableTeams, setAssignableTeams] = useState<{ id: number; name: string }[]>([]);
+  const [assignableTeams, setAssignableTeams] = useState<
+    { id: number; name: string }[]
+  >([]);
 
   // UI State
   const [dataLoading, setDataLoading] = useState(true);
   const [boardLoading, setBoardLoading] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   // Move task remark modal
   const [isMoveRemarkOpen, setIsMoveRemarkOpen] = useState(false);
@@ -153,12 +154,12 @@ export default function DashboardPage() {
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [isEditProjOpen, setIsEditProjOpen] = useState(false);
   const [isDeleteProjOpen, setIsDeleteProjOpen] = useState(false);
+  const [isDeleteTaskOpen, setIsDeleteTaskOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   // Active items for editing
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [editProjName, setEditProjName] = useState('');
-  const [editProjDesc, setEditProjDesc] = useState('');
 
   // Fetch Core Data (Projects, Users, Logs)
   const fetchData = async () => {
@@ -166,7 +167,7 @@ export default function DashboardPage() {
       setDataLoading(true);
       setGeneralError(null);
 
-      const [projRes, membersRes, logsRes, teamsRes] = await Promise.all([
+      const [projRes, logsRes, teamsRes] = await Promise.all([
         api.get('/api/projects'),
         api.get('/api/users'),
         api.get('/api/logs'),
@@ -178,10 +179,6 @@ export default function DashboardPage() {
         if (projRes.data.data.length > 0 && !activeProject) {
           handleSelectProject(projRes.data.data[0]);
         }
-      }
-
-      if (membersRes.data.success) {
-        setMembers(membersRes.data.data);
       }
 
       if (logsRes.data.success) {
@@ -196,7 +193,7 @@ export default function DashboardPage() {
           setAssignableTeams(teamsData.leaderOf || []);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Fetch dashboard details failed:', err);
       setGeneralError(
         'Failed to fetch data from API. Please verify backend state.',
@@ -218,7 +215,9 @@ export default function DashboardPage() {
         // Enrich activeProject with teamMembers so task assignee dropdowns
         // are scoped to only the project's team members
         setActiveProject((prev) =>
-          prev ? { ...prev, teamMembers: projectDetail.teamMembers || [] } : prev,
+          prev
+            ? { ...prev, teamMembers: projectDetail.teamMembers || [] }
+            : prev,
         );
       }
       refreshLogs(project.id);
@@ -233,8 +232,10 @@ export default function DashboardPage() {
     if (!authLoading && !user) {
       router.push('/login');
     } else if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
   // Refresh Logs Utility
@@ -256,9 +257,17 @@ export default function DashboardPage() {
   // ==========================================
   // PROJECT CRUD HANDLERS
   // ==========================================
-  const handleCreateProject = async (name: string, description: string, teamId: number) => {
+  const handleCreateProject = async (
+    name: string,
+    description: string,
+    teamId: number,
+  ) => {
     try {
-      const res = await api.post('/api/projects', { name, description, teamId });
+      const res = await api.post('/api/projects', {
+        name,
+        description,
+        teamId,
+      });
       if (res.data.success) {
         const createdProj = res.data.data;
         setProjects((prev) => [createdProj, ...prev]);
@@ -273,7 +282,11 @@ export default function DashboardPage() {
     }
   };
 
-  const handleEditProject = async (name: string, description: string, teamId: number) => {
+  const handleEditProject = async (
+    name: string,
+    description: string,
+    teamId: number,
+  ) => {
     if (!activeProject) return;
     try {
       const res = await api.put(`/api/projects/${activeProject.id}`, {
@@ -391,6 +404,32 @@ export default function DashboardPage() {
     }
   };
 
+  const handleRequestDeleteTask = (task: Task) => {
+    setTaskToDelete(task);
+    setIsEditTaskOpen(false);
+    setIsDeleteTaskOpen(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      await api.delete(`/api/tasks/${taskToDelete.id}`);
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskToDelete.id),
+      );
+      setActiveTask((currentTask) =>
+        currentTask?.id === taskToDelete.id ? null : currentTask,
+      );
+      refreshLogs();
+    } catch (err) {
+      console.error('Delete task failed:', err);
+    } finally {
+      setIsDeleteTaskOpen(false);
+      setTaskToDelete(null);
+    }
+  };
+
   const handleAddTaskComment = async (taskId: number, comment: string) => {
     const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
     if (res.data.success && res.data.task) {
@@ -455,22 +494,18 @@ export default function DashboardPage() {
   // ==========================================
   const handleDragOver = (
     e: React.DragEvent,
-    status: 'Todo' | 'In Progress' | 'Done',
+    _status: 'Todo' | 'In Progress' | 'Done',
   ) => {
     e.preventDefault();
-    setDragOverColumn(status);
   };
 
-  const handleDragLeave = () => {
-    setDragOverColumn(null);
-  };
+  const handleDragLeave = () => {};
 
   const handleDrop = async (
     e: React.DragEvent,
     targetStatus: 'Todo' | 'In Progress' | 'Done',
   ) => {
     e.preventDefault();
-    setDragOverColumn(null);
     const taskIdStr = e.dataTransfer.getData('text/plain');
     if (!taskIdStr) return;
 
@@ -552,8 +587,7 @@ export default function DashboardPage() {
             <button
               onClick={cycleTheme}
               className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'
-              title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Click to toggle)`}
-            >
+              title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Click to toggle)`}>
               {theme === 'light' && <Sun className='w-3.5 h-3.5' />}
               {theme === 'dark' && <Moon className='w-3.5 h-3.5' />}
               {theme === 'system' && <Monitor className='w-3.5 h-3.5' />}
@@ -592,7 +626,9 @@ export default function DashboardPage() {
                 <p className='text-xs font-semibold text-foreground/90'>
                   {user.username}
                 </p>
-                <p className='text-[10px] text-muted-foreground'>{user.email}</p>
+                <p className='text-[10px] text-muted-foreground'>
+                  {user.email}
+                </p>
               </div>
             </div>
 
@@ -653,7 +689,9 @@ export default function DashboardPage() {
             {projects.length === 0 ? (
               <div className='text-center py-8 px-4 border border-dashed border-border rounded-xl'>
                 <Folder className='w-6 h-6 text-muted-foreground/60 mx-auto mb-2' />
-                <p className='text-xs text-muted-foreground'>No projects yet.</p>
+                <p className='text-xs text-muted-foreground'>
+                  No projects yet.
+                </p>
                 {canManageWorkspace ? (
                   <button
                     onClick={() => setIsProjModalOpen(true)}
@@ -716,8 +754,6 @@ export default function DashboardPage() {
                         <div className='flex items-center gap-1'>
                           <button
                             onClick={() => {
-                              setEditProjName(activeProject.name);
-                              setEditProjDesc(activeProject.description || '');
                               setIsEditProjOpen(true);
                             }}
                             className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer'
@@ -791,8 +827,12 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onViewTask={(task) => handleOpenViewTask(task as Task)}
-                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          onViewTask={(task) =>
+                            handleOpenViewTask(task as Task)
+                          }
+                          onEditTask={(task) =>
+                            handleOpenEditTask(task as Task)
+                          }
                           canEditTask={(task) => canEditTask(task as Task)}
                         />
                         <KanbanColumn
@@ -802,8 +842,12 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onViewTask={(task) => handleOpenViewTask(task as Task)}
-                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          onViewTask={(task) =>
+                            handleOpenViewTask(task as Task)
+                          }
+                          onEditTask={(task) =>
+                            handleOpenEditTask(task as Task)
+                          }
                           canEditTask={(task) => canEditTask(task as Task)}
                         />
                         <KanbanColumn
@@ -813,8 +857,12 @@ export default function DashboardPage() {
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}
                           onDrop={handleDrop}
-                          onViewTask={(task) => handleOpenViewTask(task as Task)}
-                          onEditTask={(task) => handleOpenEditTask(task as Task)}
+                          onViewTask={(task) =>
+                            handleOpenViewTask(task as Task)
+                          }
+                          onEditTask={(task) =>
+                            handleOpenEditTask(task as Task)
+                          }
                           canEditTask={(task) => canEditTask(task as Task)}
                         />
                       </div>
@@ -875,7 +923,9 @@ export default function DashboardPage() {
         teams={assignableTeams}
       />
 
-      <Dialog open={isDeleteProjOpen} onOpenChange={setIsDeleteProjOpen}>
+      <Dialog
+        open={isDeleteProjOpen}
+        onOpenChange={setIsDeleteProjOpen}>
         <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='text-base font-bold text-foreground flex items-center gap-2'>
@@ -883,7 +933,8 @@ export default function DashboardPage() {
               Delete Project
             </DialogTitle>
             <DialogDescription className='text-sm text-muted-foreground font-sans'>
-              Are you sure you want to delete this project? All tasks and change logs will be lost permanently.
+              Are you sure you want to delete this project? All tasks and change
+              logs will be lost permanently.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className='mt-4 flex justify-end gap-2'>
@@ -922,6 +973,8 @@ export default function DashboardPage() {
         task={activeTask}
         members={activeProject?.teamMembers || []}
         onSave={handleUpdateTask}
+        canDeleteTask={canManageWorkspace}
+        onDeleteTask={(task) => handleRequestDeleteTask(task as Task)}
       />
 
       <TaskViewDialog
@@ -933,6 +986,43 @@ export default function DashboardPage() {
         onAddSubtask={handleAddSubtask}
         onToggleSubtask={handleToggleSubtask}
       />
+
+      <Dialog
+        open={isDeleteTaskOpen}
+        onOpenChange={(open) => {
+          setIsDeleteTaskOpen(open);
+          if (!open) setTaskToDelete(null);
+        }}>
+        <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
+          <DialogHeader>
+            <DialogTitle className='text-base font-bold text-foreground flex items-center gap-2'>
+              <Trash2 className='w-4.5 h-4.5 text-rose-500' />
+              Delete Task
+            </DialogTitle>
+            <DialogDescription className='text-sm text-muted-foreground font-sans'>
+              {taskToDelete
+                ? `Delete "${taskToDelete.title}" permanently? Comments, checklist items, assignees, and task activity logs will also be removed.`
+                : 'Delete this task permanently?'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-4 flex justify-end gap-2'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setIsDeleteTaskOpen(false);
+                setTaskToDelete(null);
+              }}
+              className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer'>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteTask}
+              className='bg-rose-600 hover:bg-rose-500 text-white rounded-xl cursor-pointer'>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isMoveRemarkOpen}

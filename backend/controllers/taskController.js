@@ -379,6 +379,63 @@ export async function updateTask(req, res) {
   }
 }
 
+// @desc    Delete a task and its related collaboration data
+// @route   DELETE /api/tasks/:id
+// @access  Private
+export async function deleteTask(req, res) {
+  try {
+    const taskId = req.params.id;
+
+    const [taskRows] = await pool.query(
+      `SELECT t.id, t.title, t.project_id, p.user_id as project_owner_id,
+              teams.leader_id as team_leader_id
+       FROM tasks t
+       JOIN projects p ON t.project_id = p.id
+       JOIN teams ON p.team_id = teams.id
+       WHERE t.id = ?`,
+      [taskId],
+    );
+
+    if (taskRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found',
+      });
+    }
+
+    const task = taskRows[0];
+    const canDelete =
+      req.user.role === 'admin' ||
+      task.project_owner_id === req.user.id ||
+      task.team_leader_id === req.user.id;
+
+    if (!canDelete) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins and project team leaders can delete tasks',
+      });
+    }
+
+    await pool.query('DELETE FROM tasks WHERE id = ?', [taskId]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Task deleted successfully',
+      data: {
+        id: Number(taskId),
+        title: task.title,
+        project_id: task.project_id,
+      },
+    });
+  } catch (error) {
+    console.error('Delete task error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error deleting task',
+    });
+  }
+}
+
 // @desc    Add a comment to a task
 // @route   POST /api/tasks/:id/comments
 // @access  Private

@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import Select, { MultiValue } from 'react-select';
+import Select, {
+  MultiValue,
+  StylesConfig,
+  CSSObjectWithLabel,
+  OptionProps,
+} from 'react-select';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 interface Task {
   id: number;
@@ -53,6 +59,8 @@ interface EditTaskDialogProps {
       remark: string;
     },
   ) => Promise<void>;
+  canDeleteTask?: boolean;
+  onDeleteTask?: (task: Task) => void;
 }
 
 export function EditTaskDialog({
@@ -61,6 +69,8 @@ export function EditTaskDialog({
   task,
   members,
   onSave,
+  canDeleteTask,
+  onDeleteTask,
 }: EditTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -75,8 +85,8 @@ export function EditTaskDialog({
     label: m.username,
   }));
 
-  const selectStyles = {
-    control: (provided: any) => ({
+  const selectStyles: StylesConfig<SelectOption, true> = {
+    control: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--background)',
       borderColor: 'var(--input)',
@@ -86,27 +96,30 @@ export function EditTaskDialog({
         borderColor: '#6366f1',
       },
     }),
-    menu: (provided: any) => ({
+    menu: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--popover)',
       zIndex: 50,
     }),
-    option: (provided: any, state: any) => ({
+    option: (
+      provided: CSSObjectWithLabel,
+      state: OptionProps<SelectOption, true>,
+    ) => ({
       ...provided,
       backgroundColor: state.isFocused ? 'var(--muted)' : 'var(--popover)',
       color: 'var(--popover-foreground)',
       cursor: 'pointer',
     }),
-    multiValue: (provided: any) => ({
+    multiValue: (provided: CSSObjectWithLabel) => ({
       ...provided,
       backgroundColor: 'var(--muted)',
     }),
-    multiValueLabel: (provided: any) => ({
+    multiValueLabel: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
       fontSize: '0.75rem',
     }),
-    multiValueRemove: (provided: any) => ({
+    multiValueRemove: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
       ':hover': {
@@ -114,11 +127,11 @@ export function EditTaskDialog({
         color: 'var(--accent-foreground)',
       },
     }),
-    placeholder: (provided: any) => ({
+    placeholder: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--muted-foreground)',
     }),
-    input: (provided: any) => ({
+    input: (provided: CSSObjectWithLabel) => ({
       ...provided,
       color: 'var(--foreground)',
     }),
@@ -135,6 +148,7 @@ export function EditTaskDialog({
 
   useEffect(() => {
     if (task) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(task.title);
       setDescription(task.description || '');
       setStatus(task.status);
@@ -270,7 +284,9 @@ export function EditTaskDialog({
               </label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                onChange={(e) =>
+                  setStatus(e.target.value as 'Todo' | 'In Progress' | 'Done')
+                }
                 className='w-full px-3 py-2 rounded-lg bg-background border border-input focus:border-indigo-500 focus:outline-none text-xs text-foreground transition-colors'>
                 <option value='Todo'>Todo</option>
                 <option value='In Progress'>In Progress</option>
@@ -290,12 +306,25 @@ export function EditTaskDialog({
               className='bg-background border-input focus:border-indigo-500 focus:ring-indigo-500 text-xs text-foreground'
             />
           </div>
-          <Button
-            type='submit'
-            disabled={submitting}
-            className='w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer'>
-            {submitting ? 'Saving...' : 'Save Changes'}
-          </Button>
+          <div className='flex flex-col gap-2 sm:flex-row'>
+            {canDeleteTask && task ? (
+              <Button
+                type='button'
+                variant='destructive'
+                onClick={() => onDeleteTask?.(task)}
+                disabled={submitting}
+                className='sm:w-auto text-xs font-bold py-2.5 rounded-xl cursor-pointer'>
+                <Trash2 className='h-3.5 w-3.5' />
+                Delete Task
+              </Button>
+            ) : null}
+            <Button
+              type='submit'
+              disabled={submitting}
+              className='flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer'>
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

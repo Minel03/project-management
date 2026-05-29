@@ -1,8 +1,6 @@
 # Project Management Tool
 
-A full-stack project management and Kanban board application built with a Next.js frontend, an Express/Node.js backend, and a MySQL database.
-
-The app supports role-based project workspaces, shared task status, multi-assignee tasks, due dates, task activity logs, comments, and optional checklist/subtasks for splitting work between collaborators.
+This project is a full-stack project management tool built as a developer assessment submission. It demonstrates core full-stack development skills including role-based authentication, collaborative Kanban-style task management, team workspaces, and a real-time activity log system. The application is built with Next.js and TypeScript on the frontend, Node.js/Express on the backend, and MySQL as the database.
 
 ## Key Features
 
@@ -106,6 +104,15 @@ For preview or development deployments you can set both to `true` to enable the 
 - Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, React Select, Lucide Icons, shadcn-style UI components
 - Backend: Node.js, Express, ESM modules, JWT, bcryptjs, MySQL2
 - Database: MySQL
+
+## Deployment
+
+A live version of the app is available at:
+
+- **Frontend**: [https://your-vercel-url.vercel.app](https://your-vercel-url.vercel.app)
+- **Backend**: [https://your-backend-url.render.com](https://your-backend-url.render.com)
+
+Demo credentials are the same as listed in the [Demo Accounts](#demo-accounts) section.
 
 ## Run Locally
 
@@ -264,8 +271,7 @@ npm run lint
 
 ## Verification Notes
 
-- `npm run build` in `frontend` currently passes.
-- `npm run lint` may still report pre-existing lint issues in older files, mostly strict TypeScript `any` usage and React hook lint rules.
+- `npm run build` and `npm run lint` in `frontend` both pass with 0 errors.
 - Next.js may warn about multiple lockfiles if a parent `package-lock.json` exists outside this repository.
 
 ## Known Issues / Incomplete Functionality
