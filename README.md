@@ -15,10 +15,11 @@ The app supports role-based project workspaces, shared task status, multi-assign
 
 ### Projects and Teams
 
-- Create, update, delete, and switch between project workspaces.
-- Admins and team leaders can create projects.
-- Admins can manage users, teams, leaders, and team membership from `/admin`.
-- Members can access projects where they are the owner or assigned to at least one task.
+- Create, update, delete (with a themed modal), and switch between project workspaces.
+- Projects are associated with teams. Admins and team leaders can select/change the team for a project workspace.
+- Admins and team leaders can create projects. Leaders can only create projects for teams they lead.
+- Admins can manage users, teams, leaders, and team membership from `/admin`. A debounced search bar and paginated results are available on `/admin` to easily manage and search the system users list.
+- Users can only access and view projects that belong to the teams they lead or belong to.
 
 ### Kanban Board
 
@@ -30,7 +31,7 @@ The app supports role-based project workspaces, shared task status, multi-assign
 
 ### Task Collaboration
 
-- Tasks can be assigned to multiple users.
+- Tasks can be assigned to multiple users (restricted to members of the project's assigned team, including the team leader).
 - When a task first moves to `In Progress`, the app records who started it and displays `Started by <username>`.
 - Clicking a task card opens a task details view.
 - The task details view contains:
@@ -250,6 +251,7 @@ npm run lint
 
 ## Known Issues / Incomplete Functionality
 
+- Task drag-and-drop utilizes the HTML5 Drag and Drop API, which does not support touch gestures on mobile devices. Mobile users can change a task's status via the Edit Task Dialog instead.
 - The app assumes a local MySQL instance unless `.env` is changed.
 - `Started by` currently records the first user who moved the task to `In Progress`. It is an audit-style indicator, not a live "currently working" lock.
 - Comments and checklist/subtasks live in the task details view. The edit dialog is intentionally limited to task metadata.
