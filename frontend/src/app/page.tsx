@@ -17,7 +17,6 @@ import {
   Briefcase,
   ChevronRight,
   AlertCircle,
-  Loader2,
   Folder,
   Calendar,
   Sun,
@@ -26,7 +25,9 @@ import {
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 import { KanbanColumn } from '@/components/KanbanColumn';
+import { KanbanBoardSkeleton } from '@/components/KanbanBoardSkeleton';
 import { ChangeLogSidebar } from '@/components/ChangeLogSidebar';
+import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
@@ -563,8 +564,11 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-background text-foreground'>
-        <Loader2 className='w-8 h-8 text-indigo-500 animate-spin' />
+      <div className='min-h-screen flex flex-col bg-background text-foreground'>
+        <header className='shrink-0 border-b border-border bg-card/85 px-6 py-4'>
+          <div className='h-5 w-48 rounded-md bg-muted animate-pulse' />
+        </header>
+        <DashboardSkeleton />
       </div>
     );
   }
@@ -659,14 +663,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : dataLoading ? (
-        <div className='flex-1 flex items-center justify-center bg-background'>
-          <div className='text-center'>
-            <Loader2 className='w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3' />
-            <p className='text-xs text-muted-foreground'>
-              Syncing with workspace variables...
-            </p>
-          </div>
-        </div>
+        <DashboardSkeleton />
       ) : (
         <div className='flex-1 flex flex-col lg:flex-row overflow-hidden bg-background'>
           {/* LEFT COLUMN: Project Panel */}
@@ -815,9 +812,7 @@ export default function DashboardPage() {
                   {/* Kanban Columns */}
                   <div className='flex-1 p-6 overflow-y-auto min-w-0'>
                     {boardLoading ? (
-                      <div className='h-full flex items-center justify-center'>
-                        <Loader2 className='w-6 h-6 text-indigo-500 animate-spin' />
-                      </div>
+                      <KanbanBoardSkeleton />
                     ) : (
                       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 h-full items-start'>
                         <KanbanColumn

@@ -10,7 +10,6 @@ import {
   Clock,
   Search,
   Filter,
-  Loader2,
   MessageSquare,
   AlertCircle,
   Sun,
@@ -29,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ActivityPageSkeleton } from '@/components/ActivityPageSkeleton';
 
 interface ChangeLog {
   id: number;
@@ -176,11 +176,7 @@ export default function ActivityPage() {
   });
 
   if (authLoading || loading) {
-    return (
-      <div className='min-h-screen flex items-center justify-center bg-background text-foreground'>
-        <Loader2 className='w-8 h-8 text-indigo-500 animate-spin' />
-      </div>
-    );
+    return <ActivityPageSkeleton />;
   }
 
   return (

@@ -8,8 +8,12 @@ import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  AdminPageSkeleton,
+  AdminTeamsListSkeleton,
+  AdminUsersListSkeleton,
+} from '@/components/AdminPageSkeleton';
+import {
   ArrowLeft,
-  Loader2,
   ShieldCheck,
   Users,
   FolderPlus,
@@ -343,11 +347,7 @@ export default function AdminPage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className='min-h-screen flex items-center justify-center bg-background text-foreground'>
-        <Loader2 className='w-8 h-8 text-indigo-500 animate-spin' />
-      </div>
-    );
+    return <AdminPageSkeleton />;
   }
 
   return (
@@ -544,9 +544,7 @@ export default function AdminPage() {
             </div>
 
             {usersLoading ? (
-              <div className='flex items-center justify-center py-12'>
-                <Loader2 className='w-6 h-6 text-indigo-500 animate-spin' />
-              </div>
+              <AdminUsersListSkeleton rows={usersLimit} />
             ) : (
               <div>
                 <div className='space-y-3'>
@@ -672,9 +670,7 @@ export default function AdminPage() {
               </div>
             </div>
             {teamsLoading ? (
-              <div className='flex items-center justify-center py-12'>
-                <Loader2 className='w-6 h-6 text-indigo-500 animate-spin' />
-              </div>
+              <AdminTeamsListSkeleton rows={3} />
             ) : (
               <div className='space-y-3'>
                 {teams.length === 0 ? (
