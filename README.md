@@ -94,7 +94,7 @@ If you prefer not to expose the init endpoint, run the SQL in `backend/controlle
 
 ### Deployment environment variables (recommended)
 
-Configure **`backend/.env`** (or Vercel env vars on the API project) and **`frontend/.env`** (or Vercel env vars on the Next.js project). The frontend only reads variables prefixed with `NEXT_PUBLIC_`.
+Configure **`backend/.env`** (or Vercel env vars on the API project) and **`frontend/.env`** (or Vercel env vars on the Next.js project). Use each folder’s **`.env.example`** as the checklist of keys; never commit real `.env` files. The frontend only reads variables prefixed with `NEXT_PUBLIC_`.
 
 | Variable | File | Purpose |
 | -------- | ---- | ------- |
@@ -144,6 +144,8 @@ Demo credentials are the same as listed in the [Demo Accounts](#demo-accounts) s
 
 ```bash
 cd backend
+cp .env.example .env   # Windows: copy .env.example .env
+# Edit .env — set DB_* and JWT_SECRET for your machine
 npm install
 npm start
 ```
@@ -154,40 +156,19 @@ The backend runs on:
 http://localhost:5000
 ```
 
-Review `backend/.env` before starting. A typical local setup:
-
-```text
-PORT=5000
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=project_management
-JWT_SECRET=your-secret-here
-ENABLE_DB_INIT=true
-```
-
-Update `DB_*` if your MySQL server uses different credentials. Set `ENABLE_DB_INIT=false` if you do not want the init API mounted.
+See `backend/.env.example` for all variables and comments.
 
 ### 2. Configure and Start the Frontend
 
-Create or review `frontend/.env` before starting (Next.js loads this automatically). It must point at the running backend:
-
-```text
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_ENABLE_DB_INIT=true
-```
-
-- `NEXT_PUBLIC_API_URL` — required; all API calls use this base URL.
-- `NEXT_PUBLIC_ENABLE_DB_INIT` — set to `true` for local/demo use so the login screen can initialize the database; set to `false` in production.
-
-Open a second terminal:
-
 ```bash
 cd frontend
+cp .env.example .env   # Windows: copy .env.example .env
+# Edit .env if your API is not on http://localhost:5000
 npm install
 npm run dev
 ```
+
+See `frontend/.env.example` for all variables. `NEXT_PUBLIC_API_URL` must match your running backend.
 
 The frontend runs on:
 
