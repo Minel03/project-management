@@ -94,17 +94,27 @@ If you prefer not to expose the init endpoint, run the SQL in `backend/controlle
 
 ### Deployment environment variables (recommended)
 
-Two env vars control the demo DB init feature and should be set appropriately when deploying (for example on Vercel):
+Configure **`backend/.env`** (or Vercel env vars on the API project) and **`frontend/.env`** (or Vercel env vars on the Next.js project). The frontend only reads variables prefixed with `NEXT_PUBLIC_`.
 
-- `ENABLE_DB_INIT` (backend): when set to `true` the `/api/db/init` route is mounted. Default should be `false` in production.
-- `NEXT_PUBLIC_ENABLE_DB_INIT` (frontend): when set to `true` the login UI shows the `Create Tables` / `Load Demo Data` buttons. Keep this `false` in production.
+| Variable | File | Purpose |
+| -------- | ---- | ------- |
+| `NEXT_PUBLIC_API_URL` | `frontend/.env` | Base URL for Axios (`frontend/src/utils/api.ts`). Local: `http://localhost:5000`. Production: your deployed backend URL. |
+| `NEXT_PUBLIC_ENABLE_DB_INIT` | `frontend/.env` | When `true`, the login page shows `Create Tables` / `Load Demo Data`. Use `false` in production. |
+| `ENABLE_DB_INIT` | `backend/.env` | When `true`, the `/api/db/init` route is mounted. Use `false` in production. |
+| `JWT_SECRET`, `DB_*`, `PORT` | `backend/.env` | Server, database, and auth configuration (see [Run locally — backend](#1-configure-and-start-the-backend)). |
 
 Recommended Vercel settings for production:
 
-- `ENABLE_DB_INIT=false`
-- `NEXT_PUBLIC_ENABLE_DB_INIT=false`
+```text
+# frontend
+NEXT_PUBLIC_API_URL=https://your-backend-url
+NEXT_PUBLIC_ENABLE_DB_INIT=false
 
-For preview or development deployments you can set both to `true` to enable the demo workflow, but always protect the backend route with authentication and an admin-only check.
+# backend
+ENABLE_DB_INIT=false
+```
+
+For preview or development deployments you can set both `ENABLE_DB_INIT` and `NEXT_PUBLIC_ENABLE_DB_INIT` to `true` to enable the demo workflow, but always protect the backend route with authentication and an admin-only check.
 
 ## Technology Stack
 
@@ -144,19 +154,32 @@ The backend runs on:
 http://localhost:5000
 ```
 
-Review `backend/.env` before starting. The default expected MySQL setup is:
+Review `backend/.env` before starting. A typical local setup:
 
 ```text
+PORT=5000
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=project_management
+JWT_SECRET=your-secret-here
+ENABLE_DB_INIT=true
 ```
 
-Update these values if your local MySQL server uses different credentials.
+Update `DB_*` if your MySQL server uses different credentials. Set `ENABLE_DB_INIT=false` if you do not want the init API mounted.
 
-### 2. Start the Frontend
+### 2. Configure and Start the Frontend
+
+Create or review `frontend/.env` before starting (Next.js loads this automatically). It must point at the running backend:
+
+```text
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_ENABLE_DB_INIT=true
+```
+
+- `NEXT_PUBLIC_API_URL` — required; all API calls use this base URL.
+- `NEXT_PUBLIC_ENABLE_DB_INIT` — set to `true` for local/demo use so the login screen can initialize the database; set to `false` in production.
 
 Open a second terminal:
 
