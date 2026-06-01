@@ -73,7 +73,7 @@ This project is a full-stack project management tool built as a developer assess
 **Security note (demo only)**
 
 - The `/api/db/init` endpoint and the login-screen DB buttons are provided for demo and assessment convenience. In production this endpoint should be restricted; do not leave it publicly accessible.
-- Recommended: protect the endpoint with authentication and an admin-only check (for example `protect()` + `isAdmin()` middleware). You can also hide the UI buttons in production builds.
+- Recommended: protect the endpoint with the `protect()` middleware and verify `req.user.role === 'admin'` in the handler (same pattern as admin-only routes in `userController.js`). You can also hide the UI buttons in production builds.
 - This repository seeds an admin account during demo initialization so reviewers can authenticate and run the init/seed endpoints safely. Use the seeded admin (`john_doe`) or your own admin user before calling the endpoint.
 
 Example — local (no auth required):
