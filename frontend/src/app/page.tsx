@@ -1,33 +1,25 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import api from '@/utils/api';
 import {
   Plus,
-  LogOut,
   Trash2,
   Edit3,
   User as UserIcon,
   Users,
-  History,
-  FolderPlus,
   Briefcase,
   ChevronRight,
   AlertCircle,
   Folder,
   Calendar,
-  Sun,
-  Moon,
-  Monitor,
+  FolderPlus,
 } from 'lucide-react';
-import { getInitials } from '@/lib/utils';
 import { KanbanColumn } from '@/components/KanbanColumn';
 import { KanbanBoardSkeleton } from '@/components/KanbanBoardSkeleton';
 import { ChangeLogSidebar } from '@/components/ChangeLogSidebar';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
+import { DashboardHeader } from '@/components/DashboardHeader';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
@@ -42,81 +34,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-
-interface Project {
-  id: number;
-  name: string;
-  description: string;
-  user_id?: number;
-  creator_name: string;
-  team_name?: string;
-  team_id?: number;
-  teamMembers?: Member[];
-  created_at: string;
-}
-
-interface Task {
-  id: number;
-  project_id: number;
-  title: string;
-  description: string;
-  status: 'Todo' | 'In Progress' | 'Done';
-  assigned_to: number | null;
-  assignee_name: string | null;
-  started_by: number | null;
-  started_by_name: string | null;
-  due_date: string | null;
-  assignees?: { id: number; username: string }[];
-  comments?: TaskComment[];
-  subtasks?: Subtask[];
-  created_at: string;
-  updated_at: string;
-}
-
-interface TaskComment {
-  id: number;
-  task_id: number;
-  user_id: number;
-  username: string;
-  comment: string;
-  created_at: string;
-}
-
-interface Subtask {
-  id: number;
-  task_id: number;
-  title: string;
-  assigned_to: number | null;
-  assignee_name: string | null;
-  is_done: boolean | number;
-}
-
-interface Member {
-  id: number;
-  username: string;
-  email: string;
-  role?: 'admin' | 'leader' | 'member';
-}
-
-interface ChangeLog {
-  id: number;
-  task_id: number;
-  user_id: number;
-  old_status: 'Todo' | 'In Progress' | 'Done';
-  new_status: 'Todo' | 'In Progress' | 'Done';
-  remark: string | null;
-  created_at: string;
-  task_title: string;
-  project_name: string;
-  operator_username: string;
-}
+import { useDashboard } from '@/hooks/useDashboard';
+import type { Task } from '@/types/dashboard';
 
 export default function DashboardPage() {
-  const { user, loading: authLoading, logout } = useAuth();
+  const { logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const router = useRouter();
-  const canManageWorkspace =
-    user?.role === 'admin' || (user?.leaderOf?.length ?? 0) > 0;
 
   const cycleTheme = () => {
     if (theme === 'system') setTheme('light');
@@ -124,450 +47,71 @@ export default function DashboardPage() {
     else setTheme('system');
   };
 
-  // Core Data State
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [logs, setLogs] = useState<ChangeLog[]>([]);
-  const [assignableTeams, setAssignableTeams] = useState<
-    { id: number; name: string }[]
-  >([]);
+  const dashboard = useDashboard();
 
-  // UI State
-  const [dataLoading, setDataLoading] = useState(true);
-  const [boardLoading, setBoardLoading] = useState(false);
-  const [generalError, setGeneralError] = useState<string | null>(null);
-
-  // Move task remark modal
-  const [isMoveRemarkOpen, setIsMoveRemarkOpen] = useState(false);
-  const [moveRemark, setMoveRemark] = useState('');
-  const [moveTargetStatus, setMoveTargetStatus] = useState<
-    'Todo' | 'In Progress' | 'Done' | null
-  >(null);
-  const [draggedTaskForMove, setDraggedTaskForMove] = useState<Task | null>(
-    null,
-  );
-
-  // Modals Open State
-  const [isProjModalOpen, setIsProjModalOpen] = useState(false);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [isViewTaskOpen, setIsViewTaskOpen] = useState(false);
-  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
-  const [isEditProjOpen, setIsEditProjOpen] = useState(false);
-  const [isDeleteProjOpen, setIsDeleteProjOpen] = useState(false);
-  const [isDeleteTaskOpen, setIsDeleteTaskOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-
-  // Active items for editing
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-
-  // Fetch Core Data (Projects, Users, Logs)
-  const fetchData = async () => {
-    try {
-      setDataLoading(true);
-      setGeneralError(null);
-
-      const [projRes, logsRes, teamsRes] = await Promise.all([
-        api.get('/api/projects'),
-        api.get('/api/users'),
-        api.get('/api/logs'),
-        api.get('/api/teams'),
-      ]);
-
-      if (projRes.data.success) {
-        setProjects(projRes.data.data);
-        if (projRes.data.data.length > 0 && !activeProject) {
-          handleSelectProject(projRes.data.data[0]);
-        }
-      }
-
-      if (logsRes.data.success) {
-        setLogs(logsRes.data.data);
-      }
-
-      if (teamsRes.data.success) {
-        const teamsData = teamsRes.data.data;
-        if (user?.role === 'admin') {
-          setAssignableTeams(teamsData.allTeams || []);
-        } else {
-          setAssignableTeams(teamsData.leaderOf || []);
-        }
-      }
-    } catch (err) {
-      console.error('Fetch dashboard details failed:', err);
-      setGeneralError(
-        'Failed to fetch data from API. Please verify backend state.',
-      );
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
-  // Fetch Details of a Single Selected Project
-  const handleSelectProject = async (project: Project) => {
-    setActiveProject(project);
-    setBoardLoading(true);
-    try {
-      const res = await api.get(`/api/projects/${project.id}`);
-      if (res.data.success) {
-        const projectDetail = res.data.data;
-        setTasks(projectDetail.tasks || []);
-        // Enrich activeProject with teamMembers so task assignee dropdowns
-        // are scoped to only the project's team members
-        setActiveProject((prev) =>
-          prev
-            ? { ...prev, teamMembers: projectDetail.teamMembers || [] }
-            : prev,
-        );
-      }
-      refreshLogs(project.id);
-    } catch (err) {
-      console.error('Failed to load project tasks:', err);
-    } finally {
-      setBoardLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    } else if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
-
-  // Refresh Logs Utility
-  const refreshLogs = async (projectId?: number) => {
-    try {
-      const targetProjId = projectId ?? activeProject?.id;
-      const url = targetProjId
-        ? `/api/logs?projectId=${targetProjId}`
-        : '/api/logs';
-      const logsRes = await api.get(url);
-      if (logsRes.data.success) {
-        setLogs(logsRes.data.data);
-      }
-    } catch (err) {
-      console.error('Failed to refresh activity logs:', err);
-    }
-  };
-
-  // ==========================================
-  // PROJECT CRUD HANDLERS
-  // ==========================================
-  const handleCreateProject = async (
-    name: string,
-    description: string,
-    teamId: number,
-  ) => {
-    try {
-      const res = await api.post('/api/projects', {
-        name,
-        description,
-        teamId,
-      });
-      if (res.data.success) {
-        const createdProj = res.data.data;
-        setProjects((prev) => [createdProj, ...prev]);
-        // Use handleSelectProject so teamMembers are immediately fetched
-        // and the assignee dropdown works right after project creation
-        await handleSelectProject(createdProj);
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Create project failed:', err);
-      throw err;
-    }
-  };
-
-  const handleEditProject = async (
-    name: string,
-    description: string,
-    teamId: number,
-  ) => {
-    if (!activeProject) return;
-    try {
-      const res = await api.put(`/api/projects/${activeProject.id}`, {
-        name,
-        description,
-        teamId,
-      });
-      if (res.data.success) {
-        const updatedProj = res.data.data;
-        setProjects(
-          projects.map((p) => (p.id === updatedProj.id ? updatedProj : p)),
-        );
-        setActiveProject(updatedProj);
-      }
-    } catch (err) {
-      console.error('Update project failed:', err);
-      throw err;
-    }
-  };
-
-  const handleDeleteProject = async (projectId: number) => {
-    try {
-      const res = await api.delete(`/api/projects/${projectId}`);
-      if (res.data.success) {
-        const remaining = projects.filter((p) => p.id !== projectId);
-        setProjects(remaining);
-        if (activeProject?.id === projectId) {
-          if (remaining.length > 0) {
-            handleSelectProject(remaining[0]);
-          } else {
-            setActiveProject(null);
-            setTasks([]);
-          }
-        }
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Delete project failed:', err);
-    } finally {
-      setIsDeleteProjOpen(false);
-      setProjectToDelete(null);
-    }
-  };
-
-  // ==========================================
-  // TASK CRUD HANDLERS
-  // ==========================================
-  const handleCreateTask = async (
-    title: string,
-    description: string,
-    assigneeIds: number[],
-    status: 'Todo' | 'In Progress' | 'Done',
-    dueDate: string | null,
-  ) => {
-    if (!activeProject) return;
-    try {
-      const res = await api.post(`/api/projects/${activeProject.id}/tasks`, {
-        title,
-        description,
-        status,
-        assignedTo: assigneeIds,
-        dueDate,
-      });
-
-      if (res.data.success) {
-        setTasks([...tasks, res.data.data]);
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Create task failed:', err);
-      throw err;
-    }
-  };
-
-  const handleOpenEditTask = (task: Task) => {
-    setActiveTask(task);
-    setIsEditTaskOpen(true);
-  };
-
-  const handleOpenViewTask = (task: Task) => {
-    setActiveTask(task);
-    setIsViewTaskOpen(true);
-  };
-
-  const replaceTask = (updatedTask: Task) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
-    );
-    setActiveTask((currentTask) =>
-      currentTask?.id === updatedTask.id ? updatedTask : currentTask,
-    );
-  };
-
-  const handleUpdateTask = async (
-    taskId: number,
-    fields: {
-      title: string;
-      description: string;
-      status: 'Todo' | 'In Progress' | 'Done';
-      assignedTo: number[] | null;
-      dueDate: string | null;
-      remark: string;
-    },
-  ) => {
-    try {
-      const res = await api.put(`/api/tasks/${taskId}`, fields);
-      if (res.data.success) {
-        const updatedTask = res.data.data;
-        replaceTask(updatedTask);
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Update task failed:', err);
-      throw err;
-    }
-  };
-
-  const handleRequestDeleteTask = (task: Task) => {
-    setTaskToDelete(task);
-    setIsEditTaskOpen(false);
-    setIsDeleteTaskOpen(true);
-  };
-
-  const handleDeleteTask = async () => {
-    if (!taskToDelete) return;
-
-    try {
-      await api.delete(`/api/tasks/${taskToDelete.id}`);
-      setTasks((currentTasks) =>
-        currentTasks.filter((task) => task.id !== taskToDelete.id),
-      );
-      setActiveTask((currentTask) =>
-        currentTask?.id === taskToDelete.id ? null : currentTask,
-      );
-      refreshLogs();
-    } catch (err) {
-      console.error('Delete task failed:', err);
-    } finally {
-      setIsDeleteTaskOpen(false);
-      setTaskToDelete(null);
-    }
-  };
-
-  const handleAddTaskComment = async (taskId: number, comment: string) => {
-    const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
-    }
-  };
-
-  const handleAddSubtask = async (
-    taskId: number,
-    title: string,
-    assignedTo: number | null,
-  ) => {
-    const res = await api.post(`/api/tasks/${taskId}/subtasks`, {
-      title,
-      assignedTo,
-    });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
-    }
-  };
-
-  const handleToggleSubtask = async (
-    taskId: number,
-    subtaskId: number,
-    isDone: boolean,
-  ) => {
-    const res = await api.patch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
-      isDone,
-    });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
-    }
-  };
-
-  const handleEditLogRemark = async (
-    logId: number,
-    currentRemark: string | null,
-  ) => {
-    const newRemark = prompt(
-      'Edit the remark/reason for this status change:',
-      currentRemark || '',
-    );
-    if (newRemark === null) return;
-
-    try {
-      const res = await api.patch(`/api/logs/${logId}`, {
-        remark: newRemark.trim(),
-      });
-      if (res.data.success) {
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Failed to update log remark:', err);
-    }
-  };
-
-  // ==========================================
-  // CUSTOM HTML5 DRAG & DROP HANDLERS
-  // ==========================================
-  const handleDragOver = (
-    e: React.DragEvent,
-    _status: 'Todo' | 'In Progress' | 'Done',
-  ) => {
-    e.preventDefault();
-  };
-
-  const handleDragLeave = () => {};
-
-  const handleDrop = async (
-    e: React.DragEvent,
-    targetStatus: 'Todo' | 'In Progress' | 'Done',
-  ) => {
-    e.preventDefault();
-    const taskIdStr = e.dataTransfer.getData('text/plain');
-    if (!taskIdStr) return;
-
-    const taskId = parseInt(taskIdStr);
-    const draggedTask = tasks.find((t) => t.id === taskId);
-
-    if (!draggedTask || draggedTask.status === targetStatus) return;
-
-    setDraggedTaskForMove(draggedTask);
-    setMoveTargetStatus(targetStatus);
-    setMoveRemark('');
-    setIsMoveRemarkOpen(true);
-  };
-
-  const handleConfirmMoveTask = async () => {
-    if (!draggedTaskForMove || !moveTargetStatus) return;
-
-    const taskId = draggedTaskForMove.id;
-    const remark = moveRemark.trim() || null;
-
-    try {
-      const res = await api.put(`/api/tasks/${taskId}`, {
-        status: moveTargetStatus,
-        remark,
-      });
-
-      if (res.data.success) {
-        const updatedTaskServer = res.data.data;
-        setTasks(tasks.map((t) => (t.id === taskId ? updatedTaskServer : t)));
-        refreshLogs();
-      }
-    } catch (err) {
-      console.error('Failed to update task status via drag-and-drop:', err);
-      if (activeProject) handleSelectProject(activeProject);
-    } finally {
-      setIsMoveRemarkOpen(false);
-      setDraggedTaskForMove(null);
-      setMoveTargetStatus(null);
-      setMoveRemark('');
-    }
-  };
-
-  const getTasksByStatus = (status: 'Todo' | 'In Progress' | 'Done') => {
-    return tasks.filter((t) => t.status === status);
-  };
-
-  const canEditTask = (task: Task) => {
-    if (canManageWorkspace) return true;
-    if (!user) return false;
-    return (
-      task.assigned_to === user.id ||
-      Boolean(task.assignees?.some((assignee) => assignee.id === user.id))
-    );
-  };
+  const {
+    user,
+    authLoading,
+    canManageWorkspace,
+    projects,
+    activeProject,
+    logs,
+    assignableTeams,
+    dataLoading,
+    boardLoading,
+    generalError,
+    isMoveRemarkOpen,
+    moveRemark,
+    setMoveRemark,
+    moveTargetStatus,
+    draggedTaskForMove,
+    isProjModalOpen,
+    setIsProjModalOpen,
+    isTaskModalOpen,
+    setIsTaskModalOpen,
+    isViewTaskOpen,
+    setIsViewTaskOpen,
+    isEditTaskOpen,
+    setIsEditTaskOpen,
+    isEditProjOpen,
+    setIsEditProjOpen,
+    isDeleteProjOpen,
+    setIsDeleteProjOpen,
+    isDeleteTaskOpen,
+    setIsDeleteTaskOpen,
+    projectToDelete,
+    setProjectToDelete,
+    taskToDelete,
+    setTaskToDelete,
+    activeTask,
+    fetchData,
+    handleSelectProject,
+    handleCreateProject,
+    handleEditProject,
+    handleDeleteProject,
+    handleCreateTask,
+    handleOpenEditTask,
+    handleOpenViewTask,
+    handleUpdateTask,
+    handleRequestDeleteTask,
+    handleDeleteTask,
+    handleAddTaskComment,
+    handleAddSubtask,
+    handleToggleSubtask,
+    handleEditLogRemark,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleConfirmMoveTask,
+    closeMoveRemarkDialog,
+    getTasksByStatus,
+    canEditTask,
+  } = dashboard;
 
   if (authLoading) {
     return (
       <div className='min-h-screen flex flex-col bg-background text-foreground'>
-        <header className='shrink-0 border-b border-border bg-card/85 px-6 py-4'>
-          <div className='h-5 w-48 rounded-md bg-muted animate-pulse' />
-        </header>
+        <DashboardHeader loading />
         <DashboardSkeleton />
       </div>
     );
@@ -575,78 +119,13 @@ export default function DashboardPage() {
 
   return (
     <div className='min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200'>
-      {/* Header NavBar */}
-      <header className='sticky top-0 z-20 shrink-0 border-b border-border bg-card/85 backdrop-blur-md px-6 py-4 flex items-center justify-between transition-colors duration-200'>
-        <div className='flex items-center gap-3'>
-          <div>
-            <span className='text-base font-semibold text-foreground font-sans tracking-tight'>
-              Project Management Tool
-            </span>
-          </div>
-        </div>
+      <DashboardHeader
+        user={user}
+        theme={theme}
+        onCycleTheme={cycleTheme}
+        onLogout={logout}
+      />
 
-        {user && (
-          <div className='flex items-center gap-4'>
-            {/* Theme Toggle Button */}
-            <button
-              onClick={cycleTheme}
-              className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'
-              title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)} (Click to toggle)`}>
-              {theme === 'light' && <Sun className='w-3.5 h-3.5' />}
-              {theme === 'dark' && <Moon className='w-3.5 h-3.5' />}
-              {theme === 'system' && <Monitor className='w-3.5 h-3.5' />}
-              <span className='hidden sm:inline font-sans capitalize'>
-                {theme === 'system' ? 'System Theme' : `${theme} Mode`}
-              </span>
-            </button>
-
-            {user?.role === 'admin' && (
-              <button
-                onClick={() => router.push('/activity')}
-                className='py-1.5 px-3 rounded-lg border border-border hover:border-indigo-500/30 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
-                <History className='w-3.5 h-3.5' />
-                <span className='hidden sm:inline font-sans'>
-                  Activity Feed
-                </span>
-              </button>
-            )}
-
-            {user?.role === 'admin' && (
-              <button
-                onClick={() => router.push('/admin')}
-                className='py-1.5 px-3 rounded-lg border border-border hover:border-emerald-500/30 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
-                <UserIcon className='w-3.5 h-3.5' />
-                <span className='hidden sm:inline font-sans'>
-                  Admin Console
-                </span>
-              </button>
-            )}
-
-            <div className='flex items-center gap-2.5'>
-              <div className='w-8 h-8 rounded-full bg-muted border border-indigo-500/20 flex items-center justify-center text-xs font-semibold text-indigo-600 dark:text-indigo-300'>
-                {getInitials(user.username)}
-              </div>
-              <div className='hidden sm:block text-left'>
-                <p className='text-xs font-semibold text-foreground/90'>
-                  {user.username}
-                </p>
-                <p className='text-[10px] text-muted-foreground'>
-                  {user.email}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={logout}
-              className='py-1.5 px-3 rounded-lg border border-border hover:border-rose-500/30 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 bg-background/50 hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer'>
-              <LogOut className='w-3.5 h-3.5' />
-              <span className='hidden sm:inline font-sans'>Logout</span>
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* Main Workspace Frame */}
       {generalError ? (
         <div className='flex-1 flex items-center justify-center p-6 bg-background'>
           <div className='p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 max-w-md text-center'>
@@ -666,7 +145,6 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <div className='flex-1 flex flex-col lg:flex-row overflow-hidden bg-background'>
-          {/* LEFT COLUMN: Project Panel */}
           <aside className='w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-border bg-card/45 backdrop-blur-sm p-4 flex flex-col overflow-y-auto shrink-0 transition-colors duration-200'>
             <div className='flex items-center justify-between mb-4'>
               <div className='flex items-center gap-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wider'>
@@ -736,11 +214,9 @@ export default function DashboardPage() {
             )}
           </aside>
 
-          {/* RIGHT COLUMN & BOARD: Kanban + Live Feed */}
           <main className='flex-1 flex flex-col min-w-0 overflow-y-auto lg:overflow-hidden'>
             {activeProject ? (
               <div className='flex-1 flex flex-col overflow-hidden'>
-                {/* Project SubHeader */}
                 <div className='p-6 border-b border-border bg-card/20 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-colors duration-200'>
                   <div>
                     <div className='flex items-center gap-3'>
@@ -750,9 +226,7 @@ export default function DashboardPage() {
                       {canManageWorkspace ? (
                         <div className='flex items-center gap-1'>
                           <button
-                            onClick={() => {
-                              setIsEditProjOpen(true);
-                            }}
+                            onClick={() => setIsEditProjOpen(true)}
                             className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer'
                             title='Edit Project'>
                             <Edit3 className='w-3.5 h-3.5' />
@@ -807,9 +281,7 @@ export default function DashboardPage() {
                   ) : null}
                 </div>
 
-                {/* Dashboard grid panel */}
                 <div className='flex-1 flex flex-col xl:flex-row overflow-hidden'>
-                  {/* Kanban Columns */}
                   <div className='flex-1 p-6 overflow-y-auto min-w-0'>
                     {boardLoading ? (
                       <KanbanBoardSkeleton />
@@ -864,7 +336,6 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Change Log timeline activity sidebar */}
                   <ChangeLogSidebar
                     logs={logs}
                     currentUserId={user?.id}
@@ -900,9 +371,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ==========================================
-          MODALS & DIALOGS
-          ========================================== */}
       <CreateProjectDialog
         isOpen={isProjModalOpen}
         onClose={() => setIsProjModalOpen(false)}
@@ -918,9 +386,7 @@ export default function DashboardPage() {
         teams={assignableTeams}
       />
 
-      <Dialog
-        open={isDeleteProjOpen}
-        onOpenChange={setIsDeleteProjOpen}>
+      <Dialog open={isDeleteProjOpen} onOpenChange={setIsDeleteProjOpen}>
         <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='text-base font-bold text-foreground flex items-center gap-2'>
@@ -1022,12 +488,7 @@ export default function DashboardPage() {
       <Dialog
         open={isMoveRemarkOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            setIsMoveRemarkOpen(false);
-            setDraggedTaskForMove(null);
-            setMoveTargetStatus(null);
-            setMoveRemark('');
-          }
+          if (!open) closeMoveRemarkDialog();
         }}>
         <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
@@ -1051,12 +512,7 @@ export default function DashboardPage() {
           <DialogFooter className='mt-4 flex justify-end gap-2'>
             <Button
               variant='outline'
-              onClick={() => {
-                setIsMoveRemarkOpen(false);
-                setDraggedTaskForMove(null);
-                setMoveTargetStatus(null);
-                setMoveRemark('');
-              }}
+              onClick={closeMoveRemarkDialog}
               className='rounded-xl border-border bg-background text-foreground hover:bg-muted'>
               Cancel
             </Button>

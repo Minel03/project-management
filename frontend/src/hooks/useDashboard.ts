@@ -1,0 +1,497 @@
+'use client';
+
+import { useEffect, useState, type DragEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import api from '@/utils/api';
+import type {
+  AssignableTeam,
+  ChangeLog,
+  Project,
+  Task,
+  TaskStatus,
+} from '@/types/dashboard';
+
+export function useDashboard() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  const canManageWorkspace =
+    user?.role === 'admin' || (user?.leaderOf?.length ?? 0) > 0;
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [logs, setLogs] = useState<ChangeLog[]>([]);
+  const [assignableTeams, setAssignableTeams] = useState<AssignableTeam[]>(
+    [],
+  );
+
+  const [dataLoading, setDataLoading] = useState(true);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const [isMoveRemarkOpen, setIsMoveRemarkOpen] = useState(false);
+  const [moveRemark, setMoveRemark] = useState('');
+  const [moveTargetStatus, setMoveTargetStatus] = useState<TaskStatus | null>(
+    null,
+  );
+  const [draggedTaskForMove, setDraggedTaskForMove] = useState<Task | null>(
+    null,
+  );
+
+  const [isProjModalOpen, setIsProjModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isViewTaskOpen, setIsViewTaskOpen] = useState(false);
+  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
+  const [isEditProjOpen, setIsEditProjOpen] = useState(false);
+  const [isDeleteProjOpen, setIsDeleteProjOpen] = useState(false);
+  const [isDeleteTaskOpen, setIsDeleteTaskOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const refreshLogs = async (projectId?: number) => {
+    try {
+      const targetProjId = projectId ?? activeProject?.id;
+      const url = targetProjId
+        ? `/api/logs?projectId=${targetProjId}`
+        : '/api/logs';
+      const logsRes = await api.get(url);
+      if (logsRes.data.success) {
+        setLogs(logsRes.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to refresh activity logs:', err);
+    }
+  };
+
+  const handleSelectProject = async (project: Project) => {
+    setActiveProject(project);
+    setBoardLoading(true);
+    try {
+      const res = await api.get(`/api/projects/${project.id}`);
+      if (res.data.success) {
+        const projectDetail = res.data.data;
+        setTasks(projectDetail.tasks || []);
+        setActiveProject((prev) =>
+          prev
+            ? { ...prev, teamMembers: projectDetail.teamMembers || [] }
+            : prev,
+        );
+      }
+      refreshLogs(project.id);
+    } catch (err) {
+      console.error('Failed to load project tasks:', err);
+    } finally {
+      setBoardLoading(false);
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      setDataLoading(true);
+      setGeneralError(null);
+
+      const [projRes, , logsRes, teamsRes] = await Promise.all([
+        api.get('/api/projects'),
+        api.get('/api/users'),
+        api.get('/api/logs'),
+        api.get('/api/teams'),
+      ]);
+
+      if (projRes.data.success) {
+        setProjects(projRes.data.data);
+        if (projRes.data.data.length > 0 && !activeProject) {
+          handleSelectProject(projRes.data.data[0]);
+        }
+      }
+
+      if (logsRes.data.success) {
+        setLogs(logsRes.data.data);
+      }
+
+      if (teamsRes.data.success) {
+        const teamsData = teamsRes.data.data;
+        if (user?.role === 'admin') {
+          setAssignableTeams(teamsData.allTeams || []);
+        } else {
+          setAssignableTeams(teamsData.leaderOf || []);
+        }
+      }
+    } catch (err) {
+      console.error('Fetch dashboard details failed:', err);
+      setGeneralError(
+        'Failed to fetch data from API. Please verify backend state.',
+      );
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    } else if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
+
+  const handleCreateProject = async (
+    name: string,
+    description: string,
+    teamId: number,
+  ) => {
+    try {
+      const res = await api.post('/api/projects', {
+        name,
+        description,
+        teamId,
+      });
+      if (res.data.success) {
+        const createdProj = res.data.data;
+        setProjects((prev) => [createdProj, ...prev]);
+        await handleSelectProject(createdProj);
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Create project failed:', err);
+      throw err;
+    }
+  };
+
+  const handleEditProject = async (
+    name: string,
+    description: string,
+    teamId: number,
+  ) => {
+    if (!activeProject) return;
+    try {
+      const res = await api.put(`/api/projects/${activeProject.id}`, {
+        name,
+        description,
+        teamId,
+      });
+      if (res.data.success) {
+        const updatedProj = res.data.data;
+        setProjects(
+          projects.map((p) => (p.id === updatedProj.id ? updatedProj : p)),
+        );
+        setActiveProject(updatedProj);
+      }
+    } catch (err) {
+      console.error('Update project failed:', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteProject = async (projectId: number) => {
+    try {
+      const res = await api.delete(`/api/projects/${projectId}`);
+      if (res.data.success) {
+        const remaining = projects.filter((p) => p.id !== projectId);
+        setProjects(remaining);
+        if (activeProject?.id === projectId) {
+          if (remaining.length > 0) {
+            handleSelectProject(remaining[0]);
+          } else {
+            setActiveProject(null);
+            setTasks([]);
+          }
+        }
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Delete project failed:', err);
+    } finally {
+      setIsDeleteProjOpen(false);
+      setProjectToDelete(null);
+    }
+  };
+
+  const handleCreateTask = async (
+    title: string,
+    description: string,
+    assigneeIds: number[],
+    status: TaskStatus,
+    dueDate: string | null,
+  ) => {
+    if (!activeProject) return;
+    try {
+      const res = await api.post(`/api/projects/${activeProject.id}/tasks`, {
+        title,
+        description,
+        status,
+        assignedTo: assigneeIds,
+        dueDate,
+      });
+
+      if (res.data.success) {
+        setTasks([...tasks, res.data.data]);
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Create task failed:', err);
+      throw err;
+    }
+  };
+
+  const handleOpenEditTask = (task: Task) => {
+    setActiveTask(task);
+    setIsEditTaskOpen(true);
+  };
+
+  const handleOpenViewTask = (task: Task) => {
+    setActiveTask(task);
+    setIsViewTaskOpen(true);
+  };
+
+  const replaceTask = (updatedTask: Task) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
+    );
+    setActiveTask((currentTask) =>
+      currentTask?.id === updatedTask.id ? updatedTask : currentTask,
+    );
+  };
+
+  const handleUpdateTask = async (
+    taskId: number,
+    fields: {
+      title: string;
+      description: string;
+      status: TaskStatus;
+      assignedTo: number[] | null;
+      dueDate: string | null;
+      remark: string;
+    },
+  ) => {
+    try {
+      const res = await api.put(`/api/tasks/${taskId}`, fields);
+      if (res.data.success) {
+        replaceTask(res.data.data);
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Update task failed:', err);
+      throw err;
+    }
+  };
+
+  const handleRequestDeleteTask = (task: Task) => {
+    setTaskToDelete(task);
+    setIsEditTaskOpen(false);
+    setIsDeleteTaskOpen(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      await api.delete(`/api/tasks/${taskToDelete.id}`);
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskToDelete.id),
+      );
+      setActiveTask((currentTask) =>
+        currentTask?.id === taskToDelete.id ? null : currentTask,
+      );
+      refreshLogs();
+    } catch (err) {
+      console.error('Delete task failed:', err);
+    } finally {
+      setIsDeleteTaskOpen(false);
+      setTaskToDelete(null);
+    }
+  };
+
+  const handleAddTaskComment = async (taskId: number, comment: string) => {
+    const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
+    }
+  };
+
+  const handleAddSubtask = async (
+    taskId: number,
+    title: string,
+    assignedTo: number | null,
+  ) => {
+    const res = await api.post(`/api/tasks/${taskId}/subtasks`, {
+      title,
+      assignedTo,
+    });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
+    }
+  };
+
+  const handleToggleSubtask = async (
+    taskId: number,
+    subtaskId: number,
+    isDone: boolean,
+  ) => {
+    const res = await api.patch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
+      isDone,
+    });
+    if (res.data.success && res.data.task) {
+      replaceTask(res.data.task);
+      refreshLogs();
+    }
+  };
+
+  const handleEditLogRemark = async (
+    logId: number,
+    currentRemark: string | null,
+  ) => {
+    const newRemark = prompt(
+      'Edit the remark/reason for this status change:',
+      currentRemark || '',
+    );
+    if (newRemark === null) return;
+
+    try {
+      const res = await api.patch(`/api/logs/${logId}`, {
+        remark: newRemark.trim(),
+      });
+      if (res.data.success) {
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Failed to update log remark:', err);
+    }
+  };
+
+  const handleDragOver = (e: DragEvent, _status: TaskStatus) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = () => {};
+
+  const handleDrop = async (e: DragEvent, targetStatus: TaskStatus) => {
+    e.preventDefault();
+    const taskIdStr = e.dataTransfer.getData('text/plain');
+    if (!taskIdStr) return;
+
+    const taskId = parseInt(taskIdStr);
+    const draggedTask = tasks.find((t) => t.id === taskId);
+
+    if (!draggedTask || draggedTask.status === targetStatus) return;
+
+    setDraggedTaskForMove(draggedTask);
+    setMoveTargetStatus(targetStatus);
+    setMoveRemark('');
+    setIsMoveRemarkOpen(true);
+  };
+
+  const handleConfirmMoveTask = async () => {
+    if (!draggedTaskForMove || !moveTargetStatus) return;
+
+    const taskId = draggedTaskForMove.id;
+    const remark = moveRemark.trim() || null;
+
+    try {
+      const res = await api.put(`/api/tasks/${taskId}`, {
+        status: moveTargetStatus,
+        remark,
+      });
+
+      if (res.data.success) {
+        const updatedTaskServer = res.data.data;
+        setTasks(tasks.map((t) => (t.id === taskId ? updatedTaskServer : t)));
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Failed to update task status via drag-and-drop:', err);
+      if (activeProject) handleSelectProject(activeProject);
+    } finally {
+      setIsMoveRemarkOpen(false);
+      setDraggedTaskForMove(null);
+      setMoveTargetStatus(null);
+      setMoveRemark('');
+    }
+  };
+
+  const closeMoveRemarkDialog = () => {
+    setIsMoveRemarkOpen(false);
+    setDraggedTaskForMove(null);
+    setMoveTargetStatus(null);
+    setMoveRemark('');
+  };
+
+  const getTasksByStatus = (status: TaskStatus) => {
+    return tasks.filter((t) => t.status === status);
+  };
+
+  const canEditTask = (task: Task) => {
+    if (canManageWorkspace) return true;
+    if (!user) return false;
+    return (
+      task.assigned_to === user.id ||
+      Boolean(task.assignees?.some((assignee) => assignee.id === user.id))
+    );
+  };
+
+  return {
+    user,
+    authLoading,
+    canManageWorkspace,
+    projects,
+    activeProject,
+    tasks,
+    logs,
+    assignableTeams,
+    dataLoading,
+    boardLoading,
+    generalError,
+    isMoveRemarkOpen,
+    moveRemark,
+    setMoveRemark,
+    moveTargetStatus,
+    draggedTaskForMove,
+    isProjModalOpen,
+    setIsProjModalOpen,
+    isTaskModalOpen,
+    setIsTaskModalOpen,
+    isViewTaskOpen,
+    setIsViewTaskOpen,
+    isEditTaskOpen,
+    setIsEditTaskOpen,
+    isEditProjOpen,
+    setIsEditProjOpen,
+    isDeleteProjOpen,
+    setIsDeleteProjOpen,
+    isDeleteTaskOpen,
+    setIsDeleteTaskOpen,
+    projectToDelete,
+    setProjectToDelete,
+    taskToDelete,
+    setTaskToDelete,
+    activeTask,
+    fetchData,
+    handleSelectProject,
+    handleCreateProject,
+    handleEditProject,
+    handleDeleteProject,
+    handleCreateTask,
+    handleOpenEditTask,
+    handleOpenViewTask,
+    handleUpdateTask,
+    handleRequestDeleteTask,
+    handleDeleteTask,
+    handleAddTaskComment,
+    handleAddSubtask,
+    handleToggleSubtask,
+    handleEditLogRemark,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleConfirmMoveTask,
+    closeMoveRemarkDialog,
+    getTasksByStatus,
+    canEditTask,
+  };
+}
