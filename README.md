@@ -138,7 +138,7 @@ Demo credentials are the same as listed in the [Demo Accounts](#demo-accounts) s
 ### Prerequisites
 
 - Node.js 18 or newer
-- MySQL server running locally
+- MySQL server running locally (e.g. start **MySQL** in XAMPP before initializing the app)
 
 ### 1. Configure and Start the Backend
 
@@ -194,6 +194,18 @@ You can also call the API directly:
 ```text
 GET http://localhost:5000/api/db/init?reset=true
 ```
+
+**Recommended order for reviewers:** (1) MySQL running → (2) `npm start` in `backend` → (3) `npm run dev` in `frontend` → (4) **Load Demo Data** once on the login screen (or the `curl` above). A fresh machine only needs that sequence; you do not need to create the database manually.
+
+### Troubleshooting (local / XAMPP)
+
+| Symptom | Cause | Fix |
+| -------- | ------ | --- |
+| `ECONNREFUSED` / `ECONNRESET` on init | MySQL not running | Start MySQL in XAMPP, then run init again |
+| `Unknown database` on server start | DB not initialized yet | Normal before first init; use **Load Demo Data** or `/api/db/init` |
+| `#1010` can't drop database / `Tablespace ... exists` | Partial failed init left orphan `.ibd` files | Stop MySQL → delete `mysql/data/project_management` (e.g. `C:\xampp\mysql\data\project_management`) → start MySQL → **Load Demo Data** again |
+
+`Load Demo Data` (`reset=true`) drops and recreates the entire database. If MySQL still cannot remove the folder (error 1010), delete that folder manually while MySQL is stopped.
 
 ## Demo Accounts
 

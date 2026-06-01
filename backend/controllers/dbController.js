@@ -10,25 +10,32 @@ export async function initDatabase(req, res) {
     // 1. Connect without selecting a database
     connection = await connectWithoutDB();
 
-    // 2. Create database if not exists
+    // 2. On reset, drop the whole database (cleaner than DROP TABLE; avoids orphaned .ibd files)
+    if (reset) {
+      console.log('Reset parameter is true. Dropping and recreating database...');
+      try {
+        await connection.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
+      } catch (dropErr) {
+        if (dropErr.errno === 1010) {
+          await connection.end();
+          return res.status(500).json({
+            success: false,
+            message: 'Database reset failed: MySQL could not remove the database folder.',
+            error: dropErr.message,
+            hint:
+              'Stop MySQL, delete the folder mysql/data/' +
+              dbName +
+              ' under your MySQL/XAMPP install (e.g. C:\\xampp\\mysql\\data\\' +
+              dbName +
+              '), start MySQL, then run /api/db/init?reset=true again.',
+          });
+        }
+        throw dropErr;
+      }
+    }
+
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
     await connection.end();
-
-    // If reset is true, drop existing tables first so they are re-created with new schema
-    if (reset) {
-      console.log('Reset parameter is true. Dropping existing tables...');
-      await pool.query('SET FOREIGN_KEY_CHECKS = 0');
-      await pool.query('DROP TABLE IF EXISTS change_logs');
-      await pool.query('DROP TABLE IF EXISTS task_comments');
-      await pool.query('DROP TABLE IF EXISTS task_subtasks');
-      await pool.query('DROP TABLE IF EXISTS task_assignees');
-      await pool.query('DROP TABLE IF EXISTS tasks');
-      await pool.query('DROP TABLE IF EXISTS projects');
-      await pool.query('DROP TABLE IF EXISTS team_members');
-      await pool.query('DROP TABLE IF EXISTS teams');
-      await pool.query('DROP TABLE IF EXISTS users');
-      await pool.query('SET FOREIGN_KEY_CHECKS = 1');
-    }
 
     // 3. Setup tables
     // Use the standard connection pool to execute table creation
