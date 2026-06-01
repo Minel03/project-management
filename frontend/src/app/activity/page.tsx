@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import api from "@/utils/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Clock,
@@ -129,12 +131,14 @@ export default function ActivityPage() {
           }
           return updatedLogs;
         });
+        toast.success("Remark saved.");
+        setIsRemarkModalOpen(false);
+        setEditingRemarkLogId(null);
+        setEditingRemarkText("");
       }
-      setIsRemarkModalOpen(false);
-      setEditingRemarkLogId(null);
-      setEditingRemarkText("");
     } catch (err) {
       console.error("Failed to update log remark:", err);
+      toast.error(getErrorMessage(err, "Could not save remark."));
     } finally {
       setRemarkSaving(false);
     }

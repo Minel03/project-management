@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import api from "@/utils/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,20 +28,6 @@ import {
 } from "lucide-react";
 
 import type { UserSummary, TeamSummary, TeamDetails } from "@/types/admin";
-
-const getErrorMessage = (err: unknown, fallback: string): string => {
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "response" in err &&
-    typeof (err as { response?: { data?: { message?: string } } }).response
-      ?.data?.message === "string"
-  ) {
-    return (err as { response: { data: { message: string } } }).response.data
-      .message;
-  }
-  return fallback;
-};
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -131,7 +119,9 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error("Admin data fetch failed:", err);
-      setError(getErrorMessage(err, "Unable to load admin console data."));
+      const message = getErrorMessage(err, "Unable to load admin console data.");
+      setError(message);
+      toast.error(message);
     } finally {
       setUsersLoading(false);
       setTeamsLoading(false);
@@ -181,7 +171,9 @@ export default function AdminPage() {
       !newUserEmail.trim() ||
       !newUserPassword.trim()
     ) {
-      setError("Username, email, and password are required.");
+      const message = "Username, email, and password are required.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -198,6 +190,7 @@ export default function AdminPage() {
         setNewUserEmail("");
         setNewUserPassword("");
         setNewUserRole("member");
+        toast.success("User created successfully.");
         if (currentPage === 1) {
           loadAdminData(1);
         } else {
@@ -206,7 +199,9 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error("Create user failed:", err);
-      setError(getErrorMessage(err, "Could not create user."));
+      const message = getErrorMessage(err, "Could not create user.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -215,16 +210,19 @@ export default function AdminPage() {
   const handleCreateTeam = async () => {
     setError(null);
     if (!newTeamName.trim()) {
-      setError("Team name is required.");
+      const message = "Team name is required.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     try {
       setSaving(true);
       if (!newTeamLeader) {
-        setError(
-          "Select a leader with the leader role before creating a team.",
-        );
+        const message =
+          "Select a leader with the leader role before creating a team.";
+        setError(message);
+        toast.error(message);
         return;
       }
 
@@ -236,10 +234,13 @@ export default function AdminPage() {
         setTeams([res.data.data, ...teams]);
         setNewTeamName("");
         setNewTeamLeader(null);
+        toast.success("Team created successfully.");
       }
     } catch (err) {
       console.error("Create team failed:", err);
-      setError(getErrorMessage(err, "Could not create team."));
+      const message = getErrorMessage(err, "Could not create team.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -253,11 +254,14 @@ export default function AdminPage() {
       setSaving(true);
       const res = await api.patch(`/api/users/${userId}/role`, { role });
       if (res.data.success) {
+        toast.success("User role updated.");
         loadAdminData(currentPage);
       }
     } catch (err) {
       console.error("Update role failed:", err);
-      setError(getErrorMessage(err, "Unable to update user role."));
+      const message = getErrorMessage(err, "Unable to update user role.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -271,6 +275,7 @@ export default function AdminPage() {
     try {
       setSaving(true);
       await api.delete(`/api/users/${userId}`);
+      toast.success("User deleted.");
       const newTotal = totalUsers - 1;
       const newTotalPages = Math.ceil(newTotal / usersLimit) || 1;
       if (currentPage > newTotalPages) {
@@ -288,7 +293,9 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error("Delete user failed:", err);
-      setError(getErrorMessage(err, "Unable to delete user."));
+      const message = getErrorMessage(err, "Unable to delete user.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -296,7 +303,9 @@ export default function AdminPage() {
 
   const handleAddMember = async () => {
     if (!selectedTeam || !selectedMemberToAdd) {
-      setError("Select a user to add to the team.");
+      const message = "Select a user to add to the team.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -307,9 +316,12 @@ export default function AdminPage() {
       });
       await loadTeamDetails(selectedTeam.id);
       setSelectedMemberToAdd(null);
+      toast.success("Member added to team.");
     } catch (err) {
       console.error("Add member failed:", err);
-      setError(getErrorMessage(err, "Unable to add member."));
+      const message = getErrorMessage(err, "Unable to add member.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -321,9 +333,12 @@ export default function AdminPage() {
       setSaving(true);
       await api.delete(`/api/teams/${selectedTeam.id}/members/${memberId}`);
       await loadTeamDetails(selectedTeam.id);
+      toast.success("Member removed from team.");
     } catch (err) {
       console.error("Remove member failed:", err);
-      setError(getErrorMessage(err, "Unable to remove member."));
+      const message = getErrorMessage(err, "Unable to remove member.");
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }

@@ -4,6 +4,8 @@ import { useEffect, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/utils/api';
+import { getErrorMessage } from '@/lib/get-error-message';
+import { toast } from 'sonner';
 import type {
   AssignableTeam,
   ChangeLog,
@@ -155,9 +157,11 @@ export function useDashboard() {
         setProjects((prev) => [createdProj, ...prev]);
         await handleSelectProject(createdProj);
         refreshLogs();
+        toast.success('Project created.');
       }
     } catch (err) {
       console.error('Create project failed:', err);
+      toast.error(getErrorMessage(err, 'Could not create project.'));
       throw err;
     }
   };
@@ -180,9 +184,11 @@ export function useDashboard() {
           projects.map((p) => (p.id === updatedProj.id ? updatedProj : p)),
         );
         setActiveProject(updatedProj);
+        toast.success('Project updated.');
       }
     } catch (err) {
       console.error('Update project failed:', err);
+      toast.error(getErrorMessage(err, 'Could not update project.'));
       throw err;
     }
   };
@@ -202,9 +208,11 @@ export function useDashboard() {
           }
         }
         refreshLogs();
+        toast.success('Project deleted.');
       }
     } catch (err) {
       console.error('Delete project failed:', err);
+      toast.error(getErrorMessage(err, 'Could not delete project.'));
     } finally {
       setIsDeleteProjOpen(false);
       setProjectToDelete(null);
@@ -231,9 +239,11 @@ export function useDashboard() {
       if (res.data.success) {
         setTasks([...tasks, res.data.data]);
         refreshLogs();
+        toast.success('Task created.');
       }
     } catch (err) {
       console.error('Create task failed:', err);
+      toast.error(getErrorMessage(err, 'Could not create task.'));
       throw err;
     }
   };
@@ -273,9 +283,11 @@ export function useDashboard() {
       if (res.data.success) {
         replaceTask(res.data.data);
         refreshLogs();
+        toast.success('Task updated.');
       }
     } catch (err) {
       console.error('Update task failed:', err);
+      toast.error(getErrorMessage(err, 'Could not update task.'));
       throw err;
     }
   };
@@ -298,8 +310,10 @@ export function useDashboard() {
         currentTask?.id === taskToDelete.id ? null : currentTask,
       );
       refreshLogs();
+      toast.success('Task deleted.');
     } catch (err) {
       console.error('Delete task failed:', err);
+      toast.error(getErrorMessage(err, 'Could not delete task.'));
     } finally {
       setIsDeleteTaskOpen(false);
       setTaskToDelete(null);
@@ -307,10 +321,17 @@ export function useDashboard() {
   };
 
   const handleAddTaskComment = async (taskId: number, comment: string) => {
-    const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/comments`, { comment });
+      if (res.data.success && res.data.task) {
+        replaceTask(res.data.task);
+        refreshLogs();
+        toast.success('Comment added.');
+      }
+    } catch (err) {
+      console.error('Add comment failed:', err);
+      toast.error(getErrorMessage(err, 'Could not add comment.'));
+      throw err;
     }
   };
 
@@ -319,13 +340,20 @@ export function useDashboard() {
     title: string,
     assignedTo: number | null,
   ) => {
-    const res = await api.post(`/api/tasks/${taskId}/subtasks`, {
-      title,
-      assignedTo,
-    });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
+    try {
+      const res = await api.post(`/api/tasks/${taskId}/subtasks`, {
+        title,
+        assignedTo,
+      });
+      if (res.data.success && res.data.task) {
+        replaceTask(res.data.task);
+        refreshLogs();
+        toast.success('Subtask added.');
+      }
+    } catch (err) {
+      console.error('Add subtask failed:', err);
+      toast.error(getErrorMessage(err, 'Could not add subtask.'));
+      throw err;
     }
   };
 
@@ -334,12 +362,19 @@ export function useDashboard() {
     subtaskId: number,
     isDone: boolean,
   ) => {
-    const res = await api.patch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
-      isDone,
-    });
-    if (res.data.success && res.data.task) {
-      replaceTask(res.data.task);
-      refreshLogs();
+    try {
+      const res = await api.patch(
+        `/api/tasks/${taskId}/subtasks/${subtaskId}`,
+        { isDone },
+      );
+      if (res.data.success && res.data.task) {
+        replaceTask(res.data.task);
+        refreshLogs();
+      }
+    } catch (err) {
+      console.error('Toggle subtask failed:', err);
+      toast.error(getErrorMessage(err, 'Could not update subtask.'));
+      throw err;
     }
   };
 
@@ -359,9 +394,11 @@ export function useDashboard() {
       });
       if (res.data.success) {
         refreshLogs();
+        toast.success('Remark updated.');
       }
     } catch (err) {
       console.error('Failed to update log remark:', err);
+      toast.error(getErrorMessage(err, 'Could not update remark.'));
     }
   };
 
@@ -403,9 +440,11 @@ export function useDashboard() {
         const updatedTaskServer = res.data.data;
         setTasks(tasks.map((t) => (t.id === taskId ? updatedTaskServer : t)));
         refreshLogs();
+        toast.success(`Task moved to ${moveTargetStatus}.`);
       }
     } catch (err) {
       console.error('Failed to update task status via drag-and-drop:', err);
+      toast.error(getErrorMessage(err, 'Could not move task.'));
       if (activeProject) handleSelectProject(activeProject);
     } finally {
       setIsMoveRemarkOpen(false);
