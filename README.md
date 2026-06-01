@@ -26,6 +26,7 @@ This project is a full-stack project management tool built as a developer assess
 - Theme preference is saved locally and restored on future visits.
 - A pre-hydration theme script prevents the page from flashing the wrong theme on load.
 - Theme-aware styling is applied across the dashboard, Kanban board, activity feed, admin console, login/register pages, and reusable dialogs/modals.
+- Toast notifications ([Sonner](https://sonner.emilkowal.ski/)) provide success and error feedback for dashboard, admin, and activity actions and follow the active theme.
 
 ### Kanban Board
 
@@ -107,7 +108,7 @@ For preview or development deployments you can set both to `true` to enable the 
 
 ## Technology Stack
 
-- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, React Select, Lucide Icons, shadcn-style UI components
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Axios, React Select, Lucide Icons, Sonner, shadcn-style UI components
 - Backend: Node.js, Express, ESM modules, JWT, bcryptjs, MySQL2
 - Database: MySQL
 
