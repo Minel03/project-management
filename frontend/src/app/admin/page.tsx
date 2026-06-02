@@ -1,12 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import api from "@/utils/api";
-import { getErrorMessage } from "@/lib/get-error-message";
-import { toast } from "sonner";
+import { useAdmin, type UserRole } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,420 +32,66 @@ import {
   Monitor,
 } from "lucide-react";
 
-import type { UserSummary, TeamSummary, TeamDetails } from "@/types/admin";
-
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [users, setUsers] = useState<UserSummary[]>([]);
-  const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [usersLimit] = useState(5);
-  const [teams, setTeams] = useState<TeamSummary[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [teamsLoading, setTeamsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userSearch, setUserSearch] = useState("");
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme, setTheme } = useTheme();
 
-  const [newUserName, setNewUserName] = useState("");
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"admin" | "leader" | "member">(
-    "member",
-  );
-  const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamLeader, setNewTeamLeader] = useState<number | null>(null);
-  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<number | null>(
-    null,
-  );
-  const [saving, setSaving] = useState(false);
-  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
-  const [editUsername, setEditUsername] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editPassword, setEditPassword] = useState("");
+  const {
+    user,
+    authLoading,
+    users,
+    allUsers,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalUsers,
+    usersLimit,
+    teams,
+    selectedTeam,
+    usersLoading,
+    teamsLoading,
+    error,
+    userSearch,
+    leaderCandidates,
+    newUserName,
+    setNewUserName,
+    newUserEmail,
+    setNewUserEmail,
+    newUserPassword,
+    setNewUserPassword,
+    newUserRole,
+    setNewUserRole,
+    newTeamName,
+    setNewTeamName,
+    newTeamLeader,
+    setNewTeamLeader,
+    selectedMemberToAdd,
+    setSelectedMemberToAdd,
+    saving,
+    isEditUserOpen,
+    editUsername,
+    setEditUsername,
+    editEmail,
+    setEditEmail,
+    editPassword,
+    setEditPassword,
+    handleUserSearch,
+    handleTeamToggle,
+    handleCreateUser,
+    handleCreateTeam,
+    handleOpenEditUser,
+    closeEditUserDialog,
+    handleSaveEditUser,
+    handleUpdateUserRole,
+    handleDeleteUser,
+    handleAddMember,
+    handleRemoveMember,
+  } = useAdmin();
 
   const cycleTheme = () => {
     if (theme === "system") setTheme("light");
     else if (theme === "light") setTheme("dark");
     else setTheme("system");
-  };
-
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      if (user.role !== "admin") {
-        router.push("/");
-        return;
-      }
-    }
-  }, [authLoading, user, router]);
-
-  const leaderCandidates = allUsers.filter(
-    (account) => account.role === "leader",
-  );
-
-  const loadAdminData = async (page = currentPage, search = userSearch) => {
-    setError(null);
-    setUsersLoading(true);
-    setTeamsLoading(true);
-
-    try {
-      const searchParam = search.trim()
-        ? `&search=${encodeURIComponent(search.trim())}`
-        : "";
-      const [usersRes, paginatedUsersRes, teamsRes] = await Promise.all([
-        api.get("/api/users"),
-        api.get(`/api/users?page=${page}&limit=${usersLimit}${searchParam}`),
-        api.get("/api/teams"),
-      ]);
-
-      if (usersRes.data.success) {
-        setAllUsers(usersRes.data.data || []);
-      }
-
-      if (paginatedUsersRes.data.success) {
-        setUsers(paginatedUsersRes.data.data || []);
-        if (paginatedUsersRes.data.pagination) {
-          setTotalPages(paginatedUsersRes.data.pagination.totalPages || 1);
-          setTotalUsers(paginatedUsersRes.data.pagination.total || 0);
-        } else {
-          setTotalPages(1);
-          setTotalUsers(paginatedUsersRes.data.data?.length || 0);
-        }
-      }
-
-      if (teamsRes.data.success) {
-        setTeams(teamsRes.data.data.allTeams || []);
-      }
-    } catch (err) {
-      console.error("Admin data fetch failed:", err);
-      const message = getErrorMessage(err, "Unable to load admin console data.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setUsersLoading(false);
-      setTeamsLoading(false);
-    }
-  };
-
-  const handleUserSearch = (value: string) => {
-    setUserSearch(value);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      setCurrentPage(1);
-      loadAdminData(1, value);
-    }, 350);
-  };
-
-  useEffect(() => {
-    if (user && user.role === "admin") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadAdminData(currentPage);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, user]);
-
-  const loadTeamDetails = async (teamId: number) => {
-    try {
-      const res = await api.get(`/api/teams/${teamId}`);
-      if (res.data.success) {
-        setSelectedTeam(res.data.data);
-      }
-    } catch (err) {
-      console.error("Failed to load team details:", err);
-    }
-  };
-
-  const handleTeamToggle = async (teamId: number) => {
-    if (selectedTeam?.id === teamId) {
-      setSelectedTeam(null);
-      return;
-    }
-    await loadTeamDetails(teamId);
-  };
-
-  const handleCreateUser = async () => {
-    setError(null);
-    if (
-      !newUserName.trim() ||
-      !newUserEmail.trim() ||
-      !newUserPassword.trim()
-    ) {
-      const message = "Username, email, and password are required.";
-      setError(message);
-      toast.error(message);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const res = await api.post("/api/users", {
-        username: newUserName.trim(),
-        email: newUserEmail.trim(),
-        password: newUserPassword,
-        role: newUserRole,
-      });
-      if (res.data.success) {
-        setNewUserName("");
-        setNewUserEmail("");
-        setNewUserPassword("");
-        setNewUserRole("member");
-        toast.success("User created successfully.");
-        if (currentPage === 1) {
-          loadAdminData(1);
-        } else {
-          setCurrentPage(1);
-        }
-      }
-    } catch (err) {
-      console.error("Create user failed:", err);
-      const message = getErrorMessage(err, "Could not create user.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCreateTeam = async () => {
-    setError(null);
-    if (!newTeamName.trim()) {
-      const message = "Team name is required.";
-      setError(message);
-      toast.error(message);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      if (!newTeamLeader) {
-        const message =
-          "Select a leader with the leader role before creating a team.";
-        setError(message);
-        toast.error(message);
-        return;
-      }
-
-      const res = await api.post("/api/teams", {
-        name: newTeamName.trim(),
-        leaderId: newTeamLeader,
-      });
-      if (res.data.success) {
-        setTeams([res.data.data, ...teams]);
-        setNewTeamName("");
-        setNewTeamLeader(null);
-        toast.success("Team created successfully.");
-      }
-    } catch (err) {
-      console.error("Create team failed:", err);
-      const message = getErrorMessage(err, "Could not create team.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleOpenEditUser = (account: UserSummary) => {
-    setEditingUser(account);
-    setEditUsername(account.username);
-    setEditEmail(account.email);
-    setEditPassword("");
-    setIsEditUserOpen(true);
-  };
-
-  const closeEditUserDialog = () => {
-    setIsEditUserOpen(false);
-    setEditingUser(null);
-    setEditUsername("");
-    setEditEmail("");
-    setEditPassword("");
-  };
-
-  const handleSaveEditUser = async () => {
-    if (!editingUser) return;
-
-    const trimmedUsername = editUsername.trim();
-    const trimmedEmail = editEmail.trim();
-    const trimmedPassword = editPassword.trim();
-
-    if (!trimmedUsername) {
-      toast.error("Username cannot be empty.");
-      return;
-    }
-
-    if (!trimmedEmail) {
-      toast.error("Email cannot be empty.");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-
-    if (trimmedPassword && trimmedPassword.length < 6) {
-      toast.error("Password must be at least 6 characters.");
-      return;
-    }
-
-    const usernameChanged = trimmedUsername !== editingUser.username;
-    const emailChanged = trimmedEmail !== editingUser.email;
-    if (!usernameChanged && !emailChanged && !trimmedPassword) {
-      toast.error("No changes to save.");
-      return;
-    }
-
-    const payload: { username: string; email: string; password?: string } = {
-      username: trimmedUsername,
-      email: trimmedEmail,
-    };
-    if (trimmedPassword) {
-      payload.password = trimmedPassword;
-    }
-
-    try {
-      setSaving(true);
-      const res = await api.patch(`/api/users/${editingUser.id}`, payload);
-      if (res.data.success) {
-        toast.success("User updated.");
-        closeEditUserDialog();
-        loadAdminData(currentPage);
-        if (selectedTeam) {
-          setSelectedTeam((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  members: prev.members.map((member) =>
-                    member.id === editingUser.id
-                      ? {
-                          ...member,
-                          username: res.data.data.username,
-                          email: res.data.data.email,
-                        }
-                      : member,
-                  ),
-                }
-              : prev,
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Update user failed:", err);
-      const message = getErrorMessage(err, "Unable to update user.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdateUserRole = async (
-    userId: number,
-    role: "admin" | "leader" | "member",
-  ) => {
-    try {
-      setSaving(true);
-      const res = await api.patch(`/api/users/${userId}/role`, { role });
-      if (res.data.success) {
-        toast.success("User role updated.");
-        loadAdminData(currentPage);
-      }
-    } catch (err) {
-      console.error("Update role failed:", err);
-      const message = getErrorMessage(err, "Unable to update user role.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId: number) => {
-    if (!confirm("Delete this user permanently?")) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await api.delete(`/api/users/${userId}`);
-      toast.success("User deleted.");
-      const newTotal = totalUsers - 1;
-      const newTotalPages = Math.ceil(newTotal / usersLimit) || 1;
-      if (currentPage > newTotalPages) {
-        setCurrentPage(newTotalPages);
-      } else {
-        loadAdminData(currentPage);
-      }
-      if (selectedTeam) {
-        setSelectedTeam({
-          ...selectedTeam,
-          members: selectedTeam.members.filter(
-            (member) => member.id !== userId,
-          ),
-        });
-      }
-    } catch (err) {
-      console.error("Delete user failed:", err);
-      const message = getErrorMessage(err, "Unable to delete user.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAddMember = async () => {
-    if (!selectedTeam || !selectedMemberToAdd) {
-      const message = "Select a user to add to the team.";
-      setError(message);
-      toast.error(message);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await api.post(`/api/teams/${selectedTeam.id}/members`, {
-        userId: selectedMemberToAdd,
-      });
-      await loadTeamDetails(selectedTeam.id);
-      setSelectedMemberToAdd(null);
-      toast.success("Member added to team.");
-    } catch (err) {
-      console.error("Add member failed:", err);
-      const message = getErrorMessage(err, "Unable to add member.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRemoveMember = async (memberId: number) => {
-    if (!selectedTeam) return;
-    try {
-      setSaving(true);
-      await api.delete(`/api/teams/${selectedTeam.id}/members/${memberId}`);
-      await loadTeamDetails(selectedTeam.id);
-      toast.success("Member removed from team.");
-    } catch (err) {
-      console.error("Remove member failed:", err);
-      const message = getErrorMessage(err, "Unable to remove member.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
   };
 
   if (authLoading || !user) {
@@ -546,9 +188,7 @@ export default function AdminPage() {
                 <select
                   value={newUserRole}
                   onChange={(e) =>
-                    setNewUserRole(
-                      e.target.value as "admin" | "leader" | "member",
-                    )
+                    setNewUserRole(e.target.value as UserRole)
                   }
                   className="h-10 rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                   <option value="member">Member</option>
@@ -634,7 +274,6 @@ export default function AdminPage() {
                 </p>
               </div>
             </div>
-            {/* Search bar */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -677,7 +316,7 @@ export default function AdminPage() {
                           onChange={(e) =>
                             handleUpdateUserRole(
                               account.id,
-                              e.target.value as "admin" | "leader" | "member",
+                              e.target.value as UserRole,
                             )
                           }
                           disabled={saving}
@@ -708,7 +347,6 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Pagination Controls */}
                 {!usersLoading && totalPages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-border">
                     <p className="text-xs text-muted-foreground">
