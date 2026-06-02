@@ -125,6 +125,116 @@ export async function createUser(req, res) {
   }
 }
 
+export async function updateUser(req, res) {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can update users',
+      });
+    }
+
+    const userId = req.params.id;
+    const { username, email, password } = req.body;
+    const hasUsername =
+      username !== undefined && username !== null && String(username).trim();
+    const hasEmail =
+      email !== undefined && email !== null && String(email).trim();
+    const hasPassword =
+      password !== undefined && password !== null && String(password).length > 0;
+
+    if (!hasUsername && !hasEmail && !hasPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide a username, email, and/or password to update',
+      });
+    }
+
+    const [existing] = await pool.query('SELECT id FROM users WHERE id = ?', [
+      userId,
+    ]);
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (hasUsername) {
+      const trimmedUsername = String(username).trim();
+      const [conflict] = await pool.query(
+        'SELECT id FROM users WHERE username = ? AND id != ?',
+        [trimmedUsername, userId],
+      );
+      if (conflict.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username already exists',
+        });
+      }
+      await pool.query('UPDATE users SET username = ? WHERE id = ?', [
+        trimmedUsername,
+        userId,
+      ]);
+    }
+
+    if (hasEmail) {
+      const trimmedEmail = String(email).trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide a valid email address',
+        });
+      }
+      const [conflict] = await pool.query(
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [trimmedEmail, userId],
+      );
+      if (conflict.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already exists',
+        });
+      }
+      await pool.query('UPDATE users SET email = ? WHERE id = ?', [
+        trimmedEmail,
+        userId,
+      ]);
+    }
+
+    if (hasPassword) {
+      if (String(password).length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters long',
+        });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(String(password), salt);
+      await pool.query('UPDATE users SET password = ? WHERE id = ?', [
+        hashedPassword,
+        userId,
+      ]);
+    }
+
+    const [updatedRows] = await pool.query(
+      'SELECT id, username, email, role, created_at FROM users WHERE id = ?',
+      [userId],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: updatedRows[0],
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error updating user',
+    });
+  }
+}
+
 export async function updateUserRole(req, res) {
   try {
     if (req.user.role !== 'admin') {

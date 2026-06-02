@@ -16,7 +16,7 @@ This project is a full-stack project management tool built as a developer assess
 - Create, update, delete (with a themed modal), and switch between project workspaces.
 - Projects are associated with teams. Admins and team leaders can select/change the team for a project workspace.
 - Admins and team leaders can create projects. Leaders can only create projects for teams they lead.
-- Admins can manage users, teams, leaders, and team membership from `/admin`. A debounced search bar and paginated results are available on `/admin` to easily manage and search the system users list.
+- Admins can manage users, teams, leaders, and team membership from `/admin`. A debounced search bar and paginated results are available on `/admin` to easily manage and search the system users list. Admins can edit a user's username, email, and password from the user list.
 - Users can only access and view projects that belong to the teams they lead or belong to.
 
 ### Theme Support

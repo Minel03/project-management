@@ -1,41 +1,9 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import api from '../utils/api';
-
-interface TeamSummary {
-  id: number;
-  name: string;
-  leader_id?: number;
-  leader_name?: string;
-}
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  role?: 'admin' | 'leader' | 'member';
-  leaderOf?: TeamSummary[];
-  memberOf?: TeamSummary[];
-  created_at?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-  login: (emailOrUsername: string, password: string) => Promise<void>;
-  register: (
-    username: string,
-    email: string,
-    password: string,
-  ) => Promise<void>;
-  logout: () => void;
-  triggerDbInit: (
-    reset: boolean,
-  ) => Promise<{ success: boolean; message: string; seeded?: unknown }>;
-}
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import api from "../utils/api";
+import { AuthContextType, User } from "@/types/authContext";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -47,26 +15,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         setLoading(false);
         // Redirect to login if not in public routes
-        if (pathname !== '/login' && pathname !== '/register') {
-          router.push('/login');
+        if (pathname !== "/login" && pathname !== "/register") {
+          router.push("/login");
         }
         return;
       }
 
       try {
-        const res = await api.get('/api/auth/me');
+        const res = await api.get("/api/auth/me");
         if (res.data.success) {
           setUser(res.data.data);
         } else {
-          localStorage.removeItem('token');
+          localStorage.removeItem("token");
         }
       } catch (err) {
-        console.error('Failed to load user session:', err);
-        localStorage.removeItem('token');
+        console.error("Failed to load user session:", err);
+        localStorage.removeItem("token");
       } finally {
         setLoading(false);
       }
@@ -78,20 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (emailOrUsername: string, password: string) => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/login', {
+      const res = await api.post("/api/auth/login", {
         emailOrUsername,
         password,
       });
       if (res.data.success) {
         const { token, ...userData } = res.data.data;
-        localStorage.setItem('token', token);
+        localStorage.setItem("token", token);
         setUser(userData);
-        router.push('/');
+        router.push("/");
       }
     } catch (err) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message || 'Login failed. Please check credentials.';
+          ?.message || "Login failed. Please check credentials.";
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
@@ -105,21 +73,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/register', {
+      const res = await api.post("/api/auth/register", {
         username,
         email,
         password,
       });
       if (res.data.success) {
         const { token, ...userData } = res.data.data;
-        localStorage.setItem('token', token);
+        localStorage.setItem("token", token);
         setUser(userData);
-        router.push('/');
+        router.push("/");
       }
     } catch (err) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message || 'Registration failed.';
+          ?.message || "Registration failed.";
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
@@ -127,9 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setUser(null);
-    router.push('/login');
+    router.push("/login");
   };
 
   const triggerDbInit = async (reset: boolean) => {
@@ -139,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message || 'Database initialization request failed.';
+          ?.message || "Database initialization request failed.";
       throw new Error(errorMsg);
     }
   };
@@ -163,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

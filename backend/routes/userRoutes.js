@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getUsers,
   createUser,
+  updateUser,
   updateUserRole,
   deleteUser,
 } from '../controllers/userController.js';
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.get('/', protect, getUsers);
 router.post('/', protect, createUser);
+router.patch('/:id', protect, updateUser);
 router.patch('/:id/role', protect, updateUserRole);
 router.delete('/:id', protect, deleteUser);
 

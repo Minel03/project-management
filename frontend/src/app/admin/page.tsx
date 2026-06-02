@@ -10,6 +10,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AdminPageSkeleton,
   AdminTeamsListSkeleton,
   AdminUsersListSkeleton,
@@ -22,6 +30,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Edit3,
   Sun,
   Moon,
   Monitor,
@@ -59,6 +68,11 @@ export default function AdminPage() {
     null,
   );
   const [saving, setSaving] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
 
   const cycleTheme = () => {
     if (theme === "system") setTheme("light");
@@ -239,6 +253,100 @@ export default function AdminPage() {
     } catch (err) {
       console.error("Create team failed:", err);
       const message = getErrorMessage(err, "Could not create team.");
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenEditUser = (account: UserSummary) => {
+    setEditingUser(account);
+    setEditUsername(account.username);
+    setEditEmail(account.email);
+    setEditPassword("");
+    setIsEditUserOpen(true);
+  };
+
+  const closeEditUserDialog = () => {
+    setIsEditUserOpen(false);
+    setEditingUser(null);
+    setEditUsername("");
+    setEditEmail("");
+    setEditPassword("");
+  };
+
+  const handleSaveEditUser = async () => {
+    if (!editingUser) return;
+
+    const trimmedUsername = editUsername.trim();
+    const trimmedEmail = editEmail.trim();
+    const trimmedPassword = editPassword.trim();
+
+    if (!trimmedUsername) {
+      toast.error("Username cannot be empty.");
+      return;
+    }
+
+    if (!trimmedEmail) {
+      toast.error("Email cannot be empty.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (trimmedPassword && trimmedPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+
+    const usernameChanged = trimmedUsername !== editingUser.username;
+    const emailChanged = trimmedEmail !== editingUser.email;
+    if (!usernameChanged && !emailChanged && !trimmedPassword) {
+      toast.error("No changes to save.");
+      return;
+    }
+
+    const payload: { username: string; email: string; password?: string } = {
+      username: trimmedUsername,
+      email: trimmedEmail,
+    };
+    if (trimmedPassword) {
+      payload.password = trimmedPassword;
+    }
+
+    try {
+      setSaving(true);
+      const res = await api.patch(`/api/users/${editingUser.id}`, payload);
+      if (res.data.success) {
+        toast.success("User updated.");
+        closeEditUserDialog();
+        loadAdminData(currentPage);
+        if (selectedTeam) {
+          setSelectedTeam((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  members: prev.members.map((member) =>
+                    member.id === editingUser.id
+                      ? {
+                          ...member,
+                          username: res.data.data.username,
+                          email: res.data.data.email,
+                        }
+                      : member,
+                  ),
+                }
+              : prev,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Update user failed:", err);
+      const message = getErrorMessage(err, "Unable to update user.");
       setError(message);
       toast.error(message);
     } finally {
@@ -521,7 +629,8 @@ export default function AdminPage() {
                   System users
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  All accounts in the system with current roles.
+                  All accounts in the system. Edit username, email, or password,
+                  change roles, or remove users.
                 </p>
               </div>
             </div>
@@ -554,7 +663,7 @@ export default function AdminPage() {
                     users.map((account) => (
                       <div
                         key={account.id}
-                        className="grid gap-3 rounded-3xl border border-border bg-background/60 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                        className="grid gap-3 rounded-3xl border border-border bg-background/60 p-4 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center">
                         <div>
                           <p className="font-semibold text-foreground">
                             {account.username}
@@ -571,16 +680,27 @@ export default function AdminPage() {
                               e.target.value as "admin" | "leader" | "member",
                             )
                           }
+                          disabled={saving}
                           className="h-10 rounded-2xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                           <option value="member">member</option>
                           <option value="leader">leader</option>
                           <option value="admin">admin</option>
                         </select>
                         <Button
+                          className="cursor-pointer"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEditUser(account)}
+                          disabled={saving}
+                          title="Edit username, email, or password">
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                        <Button
                           className="cursor-pointer hover:text-red-500"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteUser(account.id)}>
+                          onClick={() => handleDeleteUser(account.id)}
+                          disabled={saving}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -790,6 +910,75 @@ export default function AdminPage() {
           </section>
         )}
       </main>
+
+      <Dialog
+        open={isEditUserOpen}
+        onOpenChange={(open) => {
+          if (!open) closeEditUserDialog();
+        }}>
+        <DialogContent className="bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground">
+              Edit user
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Update account details. Leave password blank to keep the current
+              one.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <label className="grid gap-2 text-sm text-foreground">
+              <span>Username</span>
+              <Input
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                className="rounded-2xl border-input bg-background"
+                placeholder="username"
+                autoComplete="off"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-foreground">
+              <span>Email</span>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="rounded-2xl border-input bg-background"
+                placeholder="user@example.com"
+                autoComplete="off"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-foreground">
+              <span>New password</span>
+              <Input
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                className="rounded-2xl border-input bg-background"
+                placeholder="Leave blank to keep current password"
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+
+          <DialogFooter className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={closeEditUserDialog}
+              disabled={saving}
+              className="rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditUser}
+              disabled={saving}
+              className="cursor-pointer">
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
