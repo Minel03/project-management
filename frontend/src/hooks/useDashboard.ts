@@ -25,9 +25,7 @@ export function useDashboard() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [logs, setLogs] = useState<ChangeLog[]>([]);
-  const [assignableTeams, setAssignableTeams] = useState<AssignableTeam[]>(
-    [],
-  );
+  const [assignableTeams, setAssignableTeams] = useState<AssignableTeam[]>([]);
 
   const [dataLoading, setDataLoading] = useState(true);
   const [boardLoading, setBoardLoading] = useState(false);
@@ -54,7 +52,9 @@ export function useDashboard() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isEditLogRemarkOpen, setIsEditLogRemarkOpen] = useState(false);
   const [editLogRemarkId, setEditLogRemarkId] = useState<number | null>(null);
-  const [editLogRemarkCurrent, setEditLogRemarkCurrent] = useState<string | null>(null);
+  const [editLogRemarkCurrent, setEditLogRemarkCurrent] = useState<
+    string | null
+  >(null);
 
   const refreshLogs = async (projectId?: number) => {
     try {
@@ -381,10 +381,7 @@ export function useDashboard() {
     }
   };
 
-  const handleEditLogRemark = (
-    logId: number,
-    currentRemark: string | null,
-  ) => {
+  const handleEditLogRemark = (logId: number, currentRemark: string | null) => {
     setEditLogRemarkId(logId);
     setEditLogRemarkCurrent(currentRemark);
     setIsEditLogRemarkOpen(true);

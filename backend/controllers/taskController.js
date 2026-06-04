@@ -332,7 +332,8 @@ export async function updateTask(req, res) {
       }
       if (dueDate !== undefined) {
         const currentDueDate = normalizeDate(currentTask.due_date);
-        if (currentDueDate !== newDueDate) {
+        const normalizedNewDueDate = normalizeDate(dueDate);
+        if (currentDueDate !== normalizedNewDueDate) {
           modifiedFields.push('due date');
         }
       }
