@@ -25,6 +25,7 @@ import { EditProjectDialog } from '@/components/EditProjectDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { TaskViewDialog } from '@/components/TaskViewDialog';
+import { EditLogRemarkDialog } from '@/components/EditLogRemarkDialog';
 import {
   Dialog,
   DialogContent,
@@ -99,6 +100,10 @@ export default function DashboardPage() {
     handleAddSubtask,
     handleToggleSubtask,
     handleEditLogRemark,
+    handleSaveLogRemark,
+    isEditLogRemarkOpen,
+    setIsEditLogRemarkOpen,
+    editLogRemarkCurrent,
     handleDragOver,
     handleDragLeave,
     handleDrop,
@@ -342,6 +347,13 @@ export default function DashboardPage() {
                     onEditLogRemark={handleEditLogRemark}
                   />
                 </div>
+
+                <EditLogRemarkDialog
+                  isOpen={isEditLogRemarkOpen}
+                  onClose={() => setIsEditLogRemarkOpen(false)}
+                  currentRemark={editLogRemarkCurrent}
+                  onSave={handleSaveLogRemark}
+                />
               </div>
             ) : (
               <div className='flex-1 flex flex-col items-center justify-center p-6 text-center'>
@@ -386,7 +398,9 @@ export default function DashboardPage() {
         teams={assignableTeams}
       />
 
-      <Dialog open={isDeleteProjOpen} onOpenChange={setIsDeleteProjOpen}>
+      <Dialog
+        open={isDeleteProjOpen}
+        onOpenChange={setIsDeleteProjOpen}>
         <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-md rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='text-base font-bold text-foreground flex items-center gap-2'>

@@ -52,6 +52,9 @@ export function useDashboard() {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isEditLogRemarkOpen, setIsEditLogRemarkOpen] = useState(false);
+  const [editLogRemarkId, setEditLogRemarkId] = useState<number | null>(null);
+  const [editLogRemarkCurrent, setEditLogRemarkCurrent] = useState<string | null>(null);
 
   const refreshLogs = async (projectId?: number) => {
     try {
@@ -378,23 +381,26 @@ export function useDashboard() {
     }
   };
 
-  const handleEditLogRemark = async (
+  const handleEditLogRemark = (
     logId: number,
     currentRemark: string | null,
   ) => {
-    const newRemark = prompt(
-      'Edit the remark/reason for this status change:',
-      currentRemark || '',
-    );
-    if (newRemark === null) return;
+    setEditLogRemarkId(logId);
+    setEditLogRemarkCurrent(currentRemark);
+    setIsEditLogRemarkOpen(true);
+  };
+
+  const handleSaveLogRemark = async (newRemark: string) => {
+    if (editLogRemarkId === null) return;
 
     try {
-      const res = await api.patch(`/api/logs/${logId}`, {
-        remark: newRemark.trim(),
+      const res = await api.patch(`/api/logs/${editLogRemarkId}`, {
+        remark: newRemark,
       });
       if (res.data.success) {
         refreshLogs();
         toast.success('Remark updated.');
+        setIsEditLogRemarkOpen(false);
       }
     } catch (err) {
       console.error('Failed to update log remark:', err);
@@ -525,6 +531,11 @@ export function useDashboard() {
     handleAddSubtask,
     handleToggleSubtask,
     handleEditLogRemark,
+    handleSaveLogRemark,
+    isEditLogRemarkOpen,
+    setIsEditLogRemarkOpen,
+    editLogRemarkId,
+    editLogRemarkCurrent,
     handleDragOver,
     handleDragLeave,
     handleDrop,
