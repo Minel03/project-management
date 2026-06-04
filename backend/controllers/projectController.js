@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import pool from '../config/db.js';
 
 // @desc    Get all projects
 // @route   GET /api/projects
@@ -8,7 +8,7 @@ export async function getProjects(req, res) {
     const userId = req.user.id;
 
     let rows;
-    if (req.user.role === "admin") {
+    if (req.user.role === 'admin') {
       const [adminRows] = await pool.query(`
         SELECT p.*, u.username as creator_name, teams.name as team_name
         FROM projects p
@@ -38,10 +38,10 @@ export async function getProjects(req, res) {
       data: rows,
     });
   } catch (error) {
-    console.error("Get projects error:", error);
+    console.error('Get projects error:', error);
     return res.status(500).json({
       success: false,
-      message: "Server error retrieving projects",
+      message: 'Server error retrieving projects',
     });
   }
 }
@@ -57,30 +57,30 @@ export async function createProject(req, res) {
     if (!teamId) {
       return res.status(400).json({
         success: false,
-        message: "Team assignment is required to create a project",
+        message: 'Team assignment is required to create a project',
       });
     }
 
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       const [teamRows] = await pool.query(
-        "SELECT id FROM teams WHERE id = ? AND leader_id = ?",
+        'SELECT id FROM teams WHERE id = ? AND leader_id = ?',
         [teamId, userId],
       );
       if (teamRows.length === 0) {
         return res.status(403).json({
           success: false,
           message:
-            "You must be the leader of the selected team to create a project for it",
+            'You must be the leader of the selected team to create a project for it',
         });
       }
     } else {
-      const [teamRows] = await pool.query("SELECT id FROM teams WHERE id = ?", [
+      const [teamRows] = await pool.query('SELECT id FROM teams WHERE id = ?', [
         teamId,
       ]);
       if (teamRows.length === 0) {
         return res.status(404).json({
           success: false,
-          message: "Specified team not found",
+          message: 'Specified team not found',
         });
       }
     }
@@ -88,12 +88,12 @@ export async function createProject(req, res) {
     if (!name) {
       return res.status(400).json({
         success: false,
-        message: "Project name is required",
+        message: 'Project name is required',
       });
     }
 
     const [result] = await pool.query(
-      "INSERT INTO projects (name, description, user_id, team_id) VALUES (?, ?, ?, ?)",
+      'INSERT INTO projects (name, description, user_id, team_id) VALUES (?, ?, ?, ?)',
       [name, description, userId, teamId],
     );
 
@@ -114,10 +114,10 @@ export async function createProject(req, res) {
       data: newProj[0],
     });
   } catch (error) {
-    console.error("Create project error:", error);
+    console.error('Create project error:', error);
     return res.status(500).json({
       success: false,
-      message: "Server error creating project",
+      message: 'Server error creating project',
     });
   }
 }
@@ -145,11 +145,11 @@ export async function getProjectById(req, res) {
     if (projectRows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Project not found",
+        message: 'Project not found',
       });
     }
 
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       const [accessRows] = await pool.query(
         `
         SELECT 1
@@ -165,7 +165,7 @@ export async function getProjectById(req, res) {
       if (accessRows.length === 0) {
         return res.status(403).json({
           success: false,
-          message: "You do not have access to this project",
+          message: 'You do not have access to this project',
         });
       }
     }
@@ -231,10 +231,10 @@ export async function getProjectById(req, res) {
       data: project,
     });
   } catch (error) {
-    console.error("Get project by id error:", error);
+    console.error('Get project by id error:', error);
     return res.status(500).json({
       success: false,
-      message: "Server error retrieving project details",
+      message: 'Server error retrieving project details',
     });
   }
 }
@@ -250,64 +250,64 @@ export async function updateProject(req, res) {
     if (!name) {
       return res.status(400).json({
         success: false,
-        message: "Project name is required",
+        message: 'Project name is required',
       });
     }
 
     if (!teamId) {
       return res.status(400).json({
         success: false,
-        message: "Team assignment is required",
+        message: 'Team assignment is required',
       });
     }
 
     // Check if project exists and the current user is authorized
     const [existing] = await pool.query(
-      "SELECT user_id FROM projects WHERE id = ?",
+      'SELECT user_id FROM projects WHERE id = ?',
       [projectId],
     );
     if (existing.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Project not found",
+        message: 'Project not found',
       });
     }
 
     const projectOwnerId = existing[0].user_id;
-    if (req.user.role !== "admin" && projectOwnerId !== req.user.id) {
+    if (req.user.role !== 'admin' && projectOwnerId !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to update this project",
+        message: 'Not authorized to update this project',
       });
     }
 
     // If not admin, check if user is leader of the new team
-    if (req.user.role !== "admin") {
+    if (req.user.role !== 'admin') {
       const [teamRows] = await pool.query(
-        "SELECT id FROM teams WHERE id = ? AND leader_id = ?",
+        'SELECT id FROM teams WHERE id = ? AND leader_id = ?',
         [teamId, req.user.id],
       );
       if (teamRows.length === 0) {
         return res.status(403).json({
           success: false,
           message:
-            "You must be the leader of the selected team to assign the project to it",
+            'You must be the leader of the selected team to assign the project to it',
         });
       }
     } else {
-      const [teamRows] = await pool.query("SELECT id FROM teams WHERE id = ?", [
+      const [teamRows] = await pool.query('SELECT id FROM teams WHERE id = ?', [
         teamId,
       ]);
       if (teamRows.length === 0) {
         return res.status(404).json({
           success: false,
-          message: "Specified team not found",
+          message: 'Specified team not found',
         });
       }
     }
 
     await pool.query(
-      "UPDATE projects SET name = ?, description = ?, team_id = ? WHERE id = ?",
+      'UPDATE projects SET name = ?, description = ?, team_id = ? WHERE id = ?',
       [name, description, teamId, projectId],
     );
 
@@ -326,10 +326,10 @@ export async function updateProject(req, res) {
       data: updatedProj[0],
     });
   } catch (error) {
-    console.error("Update project error:", error);
+    console.error('Update project error:', error);
     return res.status(500).json({
       success: false,
-      message: "Server error updating project",
+      message: 'Server error updating project',
     });
   }
 }
@@ -343,35 +343,35 @@ export async function deleteProject(req, res) {
 
     // Check if project exists and the current user is authorized
     const [existing] = await pool.query(
-      "SELECT user_id FROM projects WHERE id = ?",
+      'SELECT user_id FROM projects WHERE id = ?',
       [projectId],
     );
     if (existing.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Project not found",
+        message: 'Project not found',
       });
     }
 
     const projectOwnerId = existing[0].user_id;
-    if (req.user.role !== "admin" && projectOwnerId !== req.user.id) {
+    if (req.user.role !== 'admin' && projectOwnerId !== req.user.id) {
       return res.status(403).json({
         success: false,
-        message: "Not authorized to delete this project",
+        message: 'Not authorized to delete this project',
       });
     }
 
-    await pool.query("DELETE FROM projects WHERE id = ?", [projectId]);
+    await pool.query('DELETE FROM projects WHERE id = ?', [projectId]);
 
     return res.status(200).json({
       success: true,
-      message: "Project and all associated tasks deleted successfully",
+      message: 'Project and all associated tasks deleted successfully',
     });
   } catch (error) {
-    console.error("Delete project error:", error);
+    console.error('Delete project error:', error);
     return res.status(500).json({
       success: false,
-      message: "Server error deleting project",
+      message: 'Server error deleting project',
     });
   }
 }

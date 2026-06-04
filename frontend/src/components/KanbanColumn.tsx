@@ -1,13 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { cn, getInitials } from '@/lib/utils';
-import {
-  CalendarDays,
-  Clock,
-  Edit3,
-  Play,
-  UserCheck,
-} from 'lucide-react';
+import { CalendarDays, Clock, Edit3, Play, UserCheck } from 'lucide-react';
 
 interface KanbanTask {
   id: number;
@@ -110,77 +104,79 @@ export function KanbanColumn({
                   <Edit3 className='w-3.5 h-3.5' />
                 </button>
               ) : null}
-            <h4
-              className='text-xs font-bold text-foreground mb-1 pr-6 truncate'
-              style={
-                status === 'Done'
-                  ? { textDecoration: 'line-through', color: '#6b7280' }
-                  : {}
-              }>
-              {task.title}
-            </h4>
-            <p className='text-[11px] text-muted-foreground line-clamp-2 mb-3'>
-              {task.description || 'No description.'}
-            </p>
-            {task.started_by_name ? (
-              <div className='mb-3 inline-flex max-w-full items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-950/40 px-2 py-1 text-[9px] font-semibold text-emerald-300'>
-                <Play className='h-2.5 w-2.5 shrink-0' />
-                <span className='truncate'>
-                  Started by {task.started_by_name}
+              <h4
+                className='text-xs font-bold text-foreground mb-1 pr-6 truncate'
+                style={
+                  status === 'Done'
+                    ? { textDecoration: 'line-through', color: '#6b7280' }
+                    : {}
+                }>
+                {task.title}
+              </h4>
+              <p className='text-[11px] text-muted-foreground line-clamp-2 mb-3'>
+                {task.description || 'No description.'}
+              </p>
+              {task.started_by_name ? (
+                <div className='mb-3 inline-flex max-w-full items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-950/40 px-2 py-1 text-[9px] font-semibold text-emerald-300'>
+                  <Play className='h-2.5 w-2.5 shrink-0' />
+                  <span className='truncate'>
+                    Started by {task.started_by_name}
+                  </span>
+                </div>
+              ) : null}
+              {task.due_date ? (
+                <div className='mb-3 flex items-center gap-1.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300'>
+                  <CalendarDays className='h-3 w-3' />
+                  <span>Due {formatDueDate(task.due_date)}</span>
+                </div>
+              ) : null}
+              <div className='flex items-center justify-between text-[9px] text-muted-foreground'>
+                {task.assignees && task.assignees.length > 0 ? (
+                  <div className='flex items-center gap-1.5 min-w-0'>
+                    <div className='flex -space-x-1.5'>
+                      {task.assignees.slice(0, 2).map((assignee) => (
+                        <div
+                          key={assignee.id}
+                          className='w-5 h-5 rounded-full bg-indigo-950 border border-indigo-500/20 flex items-center justify-center uppercase text-[8px] font-bold text-indigo-300'
+                          title={assignee.username}>
+                          {getInitials(assignee.username)}
+                        </div>
+                      ))}
+                    </div>
+                    <span className='truncate max-w-22.5'>
+                      {task.assignees.map((a) => a.username).join(', ')}
+                    </span>
+                  </div>
+                ) : task.assignee_name ? (
+                  <div className='flex items-center gap-1.5'>
+                    <div
+                      className='w-5 h-5 rounded-full bg-indigo-950 border border-indigo-500/20 flex items-center justify-center uppercase text-[8px] font-bold text-indigo-300'
+                      title={`Assigned to ${task.assignee_name}`}>
+                      {getInitials(task.assignee_name)}
+                    </div>
+                    <span className='truncate max-w-20'>
+                      {task.assignee_name}
+                    </span>
+                  </div>
+                ) : (
+                  <div className='flex items-center gap-1'>
+                    <UserCheck className='w-3.5 h-3.5' />
+                    <span>Unassigned</span>
+                  </div>
+                )}
+                <span className='flex items-center gap-1'>
+                  <Clock className='w-2.5 h-2.5' />
+                  {new Date(task.updated_at).toLocaleDateString()}
                 </span>
               </div>
-            ) : null}
-            {task.due_date ? (
-              <div className='mb-3 flex items-center gap-1.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300'>
-                <CalendarDays className='h-3 w-3' />
-                <span>Due {formatDueDate(task.due_date)}</span>
-              </div>
-            ) : null}
-            <div className='flex items-center justify-between text-[9px] text-muted-foreground'>
-              {task.assignees && task.assignees.length > 0 ? (
-                <div className='flex items-center gap-1.5 min-w-0'>
-                  <div className='flex -space-x-1.5'>
-                    {task.assignees.slice(0, 2).map((assignee) => (
-                      <div
-                        key={assignee.id}
-                        className='w-5 h-5 rounded-full bg-indigo-950 border border-indigo-500/20 flex items-center justify-center uppercase text-[8px] font-bold text-indigo-300'
-                        title={assignee.username}>
-                        {getInitials(assignee.username)}
-                      </div>
-                    ))}
-                  </div>
-                  <span className='truncate max-w-22.5'>
-                    {task.assignees.map((a) => a.username).join(', ')}
-                  </span>
-                </div>
-              ) : task.assignee_name ? (
-                <div className='flex items-center gap-1.5'>
-                  <div
-                    className='w-5 h-5 rounded-full bg-indigo-950 border border-indigo-500/20 flex items-center justify-center uppercase text-[8px] font-bold text-indigo-300'
-                    title={`Assigned to ${task.assignee_name}`}>
-                    {getInitials(task.assignee_name)}
-                  </div>
-                  <span className='truncate max-w-20'>
-                    {task.assignee_name}
-                  </span>
-                </div>
-              ) : (
-                <div className='flex items-center gap-1'>
-                  <UserCheck className='w-3.5 h-3.5' />
-                  <span>Unassigned</span>
-                </div>
-              )}
-              <span className='flex items-center gap-1'>
-                <Clock className='w-2.5 h-2.5' />
-                {new Date(task.updated_at).toLocaleDateString()}
-              </span>
-            </div>
-          </Card>
+            </Card>
           );
         })}
         {tasks.length === 0 && (
           <div className='h-24 border border-dashed border-border rounded-xl flex items-center justify-center'>
-            <span className='text-[10px] text-muted-foreground'>Drop tasks here</span>
+            <span className='text-[10px] text-muted-foreground'>
+              Drop tasks here
+            </span>
           </div>
         )}
       </div>
