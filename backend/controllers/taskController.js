@@ -112,7 +112,8 @@ const canAccessTask = async (taskId, user) => {
 export async function createTask(req, res) {
   try {
     const projectId = req.params.projectId;
-    const { title, description, status, assignedTo, dueDate, remark } = req.body;
+    const { title, description, status, assignedTo, dueDate, remark } =
+      req.body;
     const userId = req.user.id; // Logged-in user who creates it
     const canCreateTask =
       req.user.role === 'admin' || (await isTeamLeader(userId));
@@ -196,7 +197,8 @@ export async function createTask(req, res) {
 export async function updateTask(req, res) {
   try {
     const taskId = req.params.id;
-    const { title, description, status, assignedTo, dueDate, remark } = req.body;
+    const { title, description, status, assignedTo, dueDate, remark } =
+      req.body;
     const userId = req.user.id; // Logged-in user making the modification
 
     // 1. Fetch current task state
@@ -572,7 +574,7 @@ export async function addTaskSubtask(req, res) {
 export async function updateTaskSubtask(req, res) {
   try {
     const { taskId, subtaskId } = req.params;
-    const { title, assignedTo, isDone } = req.body;
+    const { isDone } = req.body;
 
     const task = await fetchTaskDetails(taskId);
     if (!task) {
@@ -600,18 +602,11 @@ export async function updateTaskSubtask(req, res) {
     }
 
     const current = rows[0];
-    const nextTitle = title !== undefined ? title : current.title;
-    const nextAssignedTo =
-      assignedTo !== undefined
-        ? assignedTo
-          ? parseInt(assignedTo, 10)
-          : null
-        : current.assigned_to;
     const nextIsDone = isDone !== undefined ? Boolean(isDone) : current.is_done;
 
     await pool.query(
-      'UPDATE task_subtasks SET title = ?, assigned_to = ?, is_done = ? WHERE id = ? AND task_id = ?',
-      [nextTitle, nextAssignedTo, nextIsDone, subtaskId, taskId],
+      'UPDATE task_subtasks SET is_done = ? WHERE id = ? AND task_id = ?',
+      [nextIsDone, subtaskId, taskId],
     );
 
     if (isDone !== undefined && Boolean(current.is_done) !== nextIsDone) {
@@ -622,7 +617,7 @@ export async function updateTaskSubtask(req, res) {
           req.user.id,
           task.status,
           task.status,
-          `${nextIsDone ? 'Completed' : 'Reopened'} subtask: ${nextTitle}`,
+          `${nextIsDone ? 'Completed' : 'Reopened'} subtask: ${current.title}`,
         ],
       );
     }
