@@ -47,11 +47,8 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className='mb-2'>
           <div className='flex items-center gap-2.5 mb-4'>
-            <div className='w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm font-bold text-white'>
-              A
-            </div>
             <span className='text-base font-semibold text-foreground tracking-tight'>
-              PM Tool
+              Project Management Tool
             </span>
           </div>
           <h1 className='text-2xl font-bold text-foreground tracking-tight'>
