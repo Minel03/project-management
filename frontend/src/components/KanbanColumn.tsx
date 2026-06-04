@@ -3,10 +3,8 @@ import { Card } from '@/components/ui/card';
 import { cn, getInitials } from '@/lib/utils';
 import {
   CalendarDays,
-  CheckSquare,
   Clock,
   Edit3,
-  MessageSquare,
   Play,
   UserCheck,
 } from 'lucide-react';
@@ -21,8 +19,6 @@ interface KanbanTask {
   assignee_name?: string | null;
   assignees?: { id: number; username: string }[];
   started_by_name?: string | null;
-  comments?: { id: number }[];
-  subtasks?: { id: number; is_done: boolean | number }[];
   updated_at: string;
 }
 
@@ -132,29 +128,6 @@ export function KanbanColumn({
                 <span className='truncate'>
                   Started by {task.started_by_name}
                 </span>
-              </div>
-            ) : null}
-            {(task.subtasks?.length || task.comments?.length) ? (
-              <div className='mb-3 flex items-center gap-3 text-[9px] text-muted-foreground'>
-                {task.subtasks?.length ? (
-                  <span className='flex items-center gap-1'>
-                    <CheckSquare className='h-3 w-3' />
-                    {
-                      task.subtasks.filter(
-                        (subtask: { is_done: boolean | number }) =>
-                          Boolean(subtask.is_done),
-                      ).length
-                    }
-                    /
-                    {task.subtasks.length}
-                  </span>
-                ) : null}
-                {task.comments?.length ? (
-                  <span className='flex items-center gap-1'>
-                    <MessageSquare className='h-3 w-3' />
-                    {task.comments.length}
-                  </span>
-                ) : null}
               </div>
             ) : null}
             {task.due_date ? (

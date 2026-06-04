@@ -185,8 +185,6 @@ export async function getProjectById(req, res) {
 
     const taskIds = taskRows.map((task) => task.id);
     let assigneeMap = {};
-    let commentMap = {};
-    let subtaskMap = {};
     if (taskIds.length > 0) {
       const [assigneeRows] = await pool.query(
         `
@@ -202,41 +200,6 @@ export async function getProjectById(req, res) {
           assigneeMap[row.task_id] = [];
         }
         assigneeMap[row.task_id].push({ id: row.id, username: row.username });
-      });
-
-      const [commentRows] = await pool.query(
-        `
-        SELECT tc.id, tc.task_id, tc.user_id, tc.comment, tc.created_at, u.username
-        FROM task_comments tc
-        JOIN users u ON tc.user_id = u.id
-        WHERE tc.task_id IN (?)
-        ORDER BY tc.created_at ASC
-      `,
-        [taskIds],
-      );
-      commentRows.forEach((row) => {
-        if (!commentMap[row.task_id]) {
-          commentMap[row.task_id] = [];
-        }
-        commentMap[row.task_id].push(row);
-      });
-
-      const [subtaskRows] = await pool.query(
-        `
-        SELECT ts.id, ts.task_id, ts.title, ts.assigned_to, ts.is_done,
-               ts.created_by, ts.created_at, ts.updated_at, u.username as assignee_name
-        FROM task_subtasks ts
-        LEFT JOIN users u ON ts.assigned_to = u.id
-        WHERE ts.task_id IN (?)
-        ORDER BY ts.created_at ASC
-      `,
-        [taskIds],
-      );
-      subtaskRows.forEach((row) => {
-        if (!subtaskMap[row.task_id]) {
-          subtaskMap[row.task_id] = [];
-        }
-        subtaskMap[row.task_id].push(row);
       });
     }
 
@@ -261,8 +224,6 @@ export async function getProjectById(req, res) {
     project.tasks = taskRows.map((task) => ({
       ...task,
       assignees: assigneeMap[task.id] || [],
-      comments: commentMap[task.id] || [],
-      subtasks: subtaskMap[task.id] || [],
     }));
 
     return res.status(200).json({
