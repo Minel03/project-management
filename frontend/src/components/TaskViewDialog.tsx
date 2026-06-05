@@ -34,17 +34,17 @@ interface TaskViewDialogProps {
   onClose: () => void;
   task: Task | null;
   members: Member[];
-  onAddComment: (taskId: number, comment: string) => Promise<void>;
+  onAddComment: (taskId: number, comment: string) => Promise<Task | void>;
   onAddSubtask: (
     taskId: number,
     title: string,
     assignedTo: number | null,
-  ) => Promise<void>;
+  ) => Promise<Task | void>;
   onToggleSubtask: (
     taskId: number,
     subtaskId: number,
     isDone: boolean,
-  ) => Promise<void>;
+  ) => Promise<Task | void>;
 }
 
 export function TaskViewDialog({
@@ -176,7 +176,10 @@ export function TaskViewDialog({
     if (!currentTask || !comment.trim()) return;
     setSubmitting(true);
     try {
-      await onAddComment(currentTask.id, comment.trim());
+      const updatedTask = await onAddComment(currentTask.id, comment.trim());
+      if (updatedTask) {
+        setDisplayTask(updatedTask);
+      }
       setComment('');
     } finally {
       setSubmitting(false);
@@ -187,15 +190,30 @@ export function TaskViewDialog({
     if (!currentTask || !subtaskTitle.trim()) return;
     setSubmitting(true);
     try {
-      await onAddSubtask(
+      const updatedTask = await onAddSubtask(
         currentTask.id,
         subtaskTitle.trim(),
         subtaskAssignee ? parseInt(subtaskAssignee.value, 10) : null,
       );
+      if (updatedTask) {
+        setDisplayTask(updatedTask);
+      }
       setSubtaskTitle('');
       setSubtaskAssignee(null);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleSubtask = async (subtaskId: number, isDone: boolean) => {
+    if (!currentTask) return;
+    const updatedTask = await onToggleSubtask(
+      currentTask.id,
+      subtaskId,
+      isDone,
+    );
+    if (updatedTask) {
+      setDisplayTask(updatedTask);
     }
   };
 
@@ -266,11 +284,7 @@ export function TaskViewDialog({
                         type='checkbox'
                         checked={Boolean(subtask.is_done)}
                         onChange={(e) =>
-                          onToggleSubtask(
-                            currentTask.id,
-                            subtask.id,
-                            e.target.checked,
-                          )
+                          void handleToggleSubtask(subtask.id, e.target.checked)
                         }
                         className='mt-0.5 h-3.5 w-3.5 accent-emerald-500'
                       />

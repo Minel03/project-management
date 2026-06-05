@@ -330,6 +330,7 @@ export function useDashboard() {
         replaceTask(res.data.task);
         refreshLogs();
         toast.success('Comment added.');
+        return res.data.task as Task;
       }
     } catch (err) {
       console.error('Add comment failed:', err);
@@ -352,6 +353,7 @@ export function useDashboard() {
         replaceTask(res.data.task);
         refreshLogs();
         toast.success('Subtask added.');
+        return res.data.task as Task;
       }
     } catch (err) {
       console.error('Add subtask failed:', err);
@@ -373,6 +375,7 @@ export function useDashboard() {
       if (res.data.success && res.data.task) {
         replaceTask(res.data.task);
         refreshLogs();
+        return res.data.task as Task;
       }
     } catch (err) {
       console.error('Toggle subtask failed:', err);
