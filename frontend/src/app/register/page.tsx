@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
@@ -13,9 +13,11 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
     setError(null);
 
     if (!username || !email || !password || !confirmPassword) {
@@ -31,12 +33,14 @@ export default function RegisterPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       await register(username, email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

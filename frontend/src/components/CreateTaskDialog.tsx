@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Select, {
   MultiValue,
   StylesConfig,
@@ -51,6 +51,7 @@ export function CreateTaskDialog({
   const [status, setStatus] = useState<'Todo' | 'In Progress' | 'Done'>('Todo');
   const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const assigneeOptions = members.map((m) => ({
     value: String(m.id),
@@ -115,7 +116,8 @@ export function CreateTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title) return;
+    if (submittingRef.current || !title) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onCreate(
@@ -134,6 +136,7 @@ export function CreateTaskDialog({
     } catch (err) {
       console.error('Failed to create task:', err);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

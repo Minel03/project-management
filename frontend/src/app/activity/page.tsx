@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -53,6 +53,7 @@ export default function ActivityPage() {
   );
   const [editingRemarkText, setEditingRemarkText] = useState("");
   const [remarkSaving, setRemarkSaving] = useState(false);
+  const remarkSavingRef = useRef(false);
 
   const cycleTheme = () => {
     if (theme === "system") setTheme("light");
@@ -111,9 +112,10 @@ export default function ActivityPage() {
   };
 
   const handleSaveRemark = async () => {
-    if (editingRemarkLogId === null) return;
+    if (editingRemarkLogId === null || remarkSavingRef.current) return;
 
     try {
+      remarkSavingRef.current = true;
       setRemarkSaving(true);
       const trimmedRemark = editingRemarkText.trim();
       const res = await api.patch(`/api/logs/${editingRemarkLogId}`, {
@@ -140,6 +142,7 @@ export default function ActivityPage() {
       console.error("Failed to update log remark:", err);
       toast.error(getErrorMessage(err, "Could not save remark."));
     } finally {
+      remarkSavingRef.current = false;
       setRemarkSaving(false);
     }
   };

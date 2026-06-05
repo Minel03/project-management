@@ -61,6 +61,10 @@ export default function DashboardPage() {
     dataLoading,
     boardLoading,
     generalError,
+    deletingProject,
+    deletingTask,
+    savingMoveRemark,
+    savingLogRemark,
     isMoveRemarkOpen,
     moveRemark,
     setMoveRemark,
@@ -351,9 +355,10 @@ export default function DashboardPage() {
                 <EditLogRemarkDialog
                   isOpen={isEditLogRemarkOpen}
                   onClose={() => setIsEditLogRemarkOpen(false)}
-                  currentRemark={editLogRemarkCurrent}
-                  onSave={handleSaveLogRemark}
-                />
+        currentRemark={editLogRemarkCurrent}
+        onSave={handleSaveLogRemark}
+        saving={savingLogRemark}
+      />
               </div>
             ) : (
               <div className='flex-1 flex flex-col items-center justify-center p-6 text-center'>
@@ -419,6 +424,7 @@ export default function DashboardPage() {
                 setIsDeleteProjOpen(false);
                 setProjectToDelete(null);
               }}
+              disabled={deletingProject}
               className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer'>
               Cancel
             </Button>
@@ -428,8 +434,9 @@ export default function DashboardPage() {
                   await handleDeleteProject(projectToDelete);
                 }
               }}
+              disabled={deletingProject}
               className='bg-rose-600 hover:bg-rose-500 text-rose-foreground rounded-xl cursor-pointer'>
-              Delete
+              {deletingProject ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -487,13 +494,15 @@ export default function DashboardPage() {
                 setIsDeleteTaskOpen(false);
                 setTaskToDelete(null);
               }}
+              disabled={deletingTask}
               className='rounded-xl border-border bg-background text-foreground hover:bg-muted cursor-pointer'>
               Cancel
             </Button>
             <Button
               onClick={handleDeleteTask}
+              disabled={deletingTask}
               className='bg-rose-600 hover:bg-rose-500 text-white rounded-xl cursor-pointer'>
-              Delete
+              {deletingTask ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -527,10 +536,15 @@ export default function DashboardPage() {
             <Button
               variant='outline'
               onClick={closeMoveRemarkDialog}
+              disabled={savingMoveRemark}
               className='rounded-xl border-border bg-background text-foreground hover:bg-muted'>
               Cancel
             </Button>
-            <Button onClick={handleConfirmMoveTask}>Confirm</Button>
+            <Button
+              onClick={handleConfirmMoveTask}
+              disabled={savingMoveRemark}>
+              {savingMoveRemark ? 'Moving...' : 'Confirm'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

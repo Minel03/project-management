@@ -38,6 +38,7 @@ export function useAdmin() {
     null,
   );
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
   const [editUsername, setEditUsername] = useState('');
@@ -141,6 +142,7 @@ export function useAdmin() {
   };
 
   const handleCreateUser = async () => {
+    if (savingRef.current) return;
     setError(null);
     if (
       !newUserName.trim() ||
@@ -154,6 +156,7 @@ export function useAdmin() {
     }
 
     try {
+      savingRef.current = true;
       setSaving(true);
       const res = await api.post('/api/users', {
         username: newUserName.trim(),
@@ -179,11 +182,13 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const handleCreateTeam = async () => {
+    if (savingRef.current) return;
     setError(null);
     if (!newTeamName.trim()) {
       const message = 'Team name is required.';
@@ -191,17 +196,17 @@ export function useAdmin() {
       toast.error(message);
       return;
     }
+    if (!newTeamLeader) {
+      const message =
+        'Select a leader with the leader role before creating a team.';
+      setError(message);
+      toast.error(message);
+      return;
+    }
 
     try {
+      savingRef.current = true;
       setSaving(true);
-      if (!newTeamLeader) {
-        const message =
-          'Select a leader with the leader role before creating a team.';
-        setError(message);
-        toast.error(message);
-        return;
-      }
-
       const res = await api.post('/api/teams', {
         name: newTeamName.trim(),
         leaderId: newTeamLeader,
@@ -218,6 +223,7 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -239,7 +245,7 @@ export function useAdmin() {
   };
 
   const handleSaveEditUser = async () => {
-    if (!editingUser) return;
+    if (!editingUser || savingRef.current) return;
 
     const trimmedUsername = editUsername.trim();
     const trimmedEmail = editEmail.trim();
@@ -281,6 +287,7 @@ export function useAdmin() {
     }
 
     try {
+      savingRef.current = true;
       setSaving(true);
       const res = await api.patch(`/api/users/${editingUser.id}`, payload);
       if (res.data.success) {
@@ -312,12 +319,15 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const handleUpdateUserRole = async (userId: number, role: UserRole) => {
+    if (savingRef.current) return;
     try {
+      savingRef.current = true;
       setSaving(true);
       const res = await api.patch(`/api/users/${userId}/role`, { role });
       if (res.data.success) {
@@ -330,16 +340,19 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const handleDeleteUser = async (userId: number) => {
+    if (savingRef.current) return;
     if (!confirm('Delete this user permanently?')) {
       return;
     }
 
     try {
+      savingRef.current = true;
       setSaving(true);
       await api.delete(`/api/users/${userId}`);
       toast.success('User deleted.');
@@ -364,11 +377,13 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const handleAddMember = async () => {
+    if (savingRef.current) return;
     if (!selectedTeam || !selectedMemberToAdd) {
       const message = 'Select a user to add to the team.';
       setError(message);
@@ -377,6 +392,7 @@ export function useAdmin() {
     }
 
     try {
+      savingRef.current = true;
       setSaving(true);
       await api.post(`/api/teams/${selectedTeam.id}/members`, {
         userId: selectedMemberToAdd,
@@ -390,13 +406,15 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const handleRemoveMember = async (memberId: number) => {
-    if (!selectedTeam) return;
+    if (!selectedTeam || savingRef.current) return;
     try {
+      savingRef.current = true;
       setSaving(true);
       await api.delete(`/api/teams/${selectedTeam.id}/members/${memberId}`);
       await loadTeamDetails(selectedTeam.id);
@@ -407,6 +425,7 @@ export function useAdmin() {
       setError(message);
       toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

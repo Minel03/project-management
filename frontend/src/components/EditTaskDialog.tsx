@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Select, {
   MultiValue,
   StylesConfig,
@@ -79,6 +79,7 @@ export function EditTaskDialog({
   const [dueDate, setDueDate] = useState('');
   const [remark, setRemark] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const assigneeOptions = members.map((m) => ({
     value: String(m.id),
@@ -173,7 +174,8 @@ export function EditTaskDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!task) return;
+    if (submittingRef.current || !task) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSave(task.id, {
@@ -193,6 +195,7 @@ export function EditTaskDialog({
     } catch (err) {
       console.error('Failed to save task:', err);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

@@ -504,7 +504,8 @@ export default function AdminPage() {
                           className="cursor-pointer hover:text-red-500"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveMember(member.id)}>
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={saving}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

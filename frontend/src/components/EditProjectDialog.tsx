@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ export function EditProjectDialog({
   const [description, setDescription] = useState('');
   const [teamId, setTeamId] = useState<number | ''>('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (project) {
@@ -50,7 +51,8 @@ export function EditProjectDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !teamId) return;
+    if (submittingRef.current || !name || !teamId) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSave(name, description, Number(teamId));
@@ -58,6 +60,7 @@ export function EditProjectDialog({
     } catch (err) {
       console.error('Failed to update project:', err);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -57,8 +57,10 @@ export function CreateUserDialog({
   const [role, setRole] = useState<'admin' | 'leader' | 'member'>('member');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const handleSubmit = async () => {
+    if (savingRef.current) return;
     setError(null);
     if (!username.trim() || !email.trim() || !password.trim()) {
       setError('Username, email, and password are required.');
@@ -66,6 +68,7 @@ export function CreateUserDialog({
     }
 
     try {
+      savingRef.current = true;
       setSaving(true);
       await onCreate(username.trim(), email.trim(), password, role);
       setUsername('');
@@ -76,6 +79,7 @@ export function CreateUserDialog({
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to create user.'));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

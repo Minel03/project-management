@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -19,8 +19,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const [isDbInitializing, setIsDbInitializing] = useState(false);
+  const isDbInitializingRef = useRef(false);
   const [dbInitMessage, setDbInitMessage] = useState<string | null>(null);
   const [dbInitType, setDbInitType] = useState<'success' | 'error' | null>(
     null,
@@ -28,22 +30,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
     setError(null);
     if (!emailOrUsername || !password) {
       setError('Please enter all credentials');
       return;
     }
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       await login(emailOrUsername, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleDbInit = async (reset: boolean) => {
+    if (isDbInitializingRef.current) return;
+    isDbInitializingRef.current = true;
     setIsDbInitializing(true);
     setDbInitMessage(null);
     setDbInitType(null);
@@ -68,6 +75,7 @@ export default function LoginPage() {
           : 'Could not reach backend. Is the server running?',
       );
     } finally {
+      isDbInitializingRef.current = false;
       setIsDbInitializing(false);
     }
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/utils/api';
@@ -30,6 +30,22 @@ export function useDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [boardLoading, setBoardLoading] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [editingProject, setEditingProject] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState(false);
+  const [deletingTask, setDeletingTask] = useState(false);
+  const [savingMoveRemark, setSavingMoveRemark] = useState(false);
+  const [savingLogRemark, setSavingLogRemark] = useState(false);
+  const creatingProjectRef = useRef(false);
+  const editingProjectRef = useRef(false);
+  const deletingProjectRef = useRef(false);
+  const creatingTaskRef = useRef(false);
+  const editingTaskRef = useRef(false);
+  const deletingTaskRef = useRef(false);
+  const savingMoveRemarkRef = useRef(false);
+  const savingLogRemarkRef = useRef(false);
 
   const [isMoveRemarkOpen, setIsMoveRemarkOpen] = useState(false);
   const [moveRemark, setMoveRemark] = useState('');
@@ -149,7 +165,10 @@ export function useDashboard() {
     description: string,
     teamId: number,
   ) => {
+    if (creatingProjectRef.current) return;
     try {
+      creatingProjectRef.current = true;
+      setCreatingProject(true);
       const res = await api.post('/api/projects', {
         name,
         description,
@@ -166,6 +185,9 @@ export function useDashboard() {
       console.error('Create project failed:', err);
       toast.error(getErrorMessage(err, 'Could not create project.'));
       throw err;
+    } finally {
+      creatingProjectRef.current = false;
+      setCreatingProject(false);
     }
   };
 
@@ -174,8 +196,10 @@ export function useDashboard() {
     description: string,
     teamId: number,
   ) => {
-    if (!activeProject) return;
+    if (!activeProject || editingProjectRef.current) return;
     try {
+      editingProjectRef.current = true;
+      setEditingProject(true);
       const res = await api.put(`/api/projects/${activeProject.id}`, {
         name,
         description,
@@ -193,11 +217,17 @@ export function useDashboard() {
       console.error('Update project failed:', err);
       toast.error(getErrorMessage(err, 'Could not update project.'));
       throw err;
+    } finally {
+      editingProjectRef.current = false;
+      setEditingProject(false);
     }
   };
 
   const handleDeleteProject = async (projectId: number) => {
+    if (deletingProjectRef.current) return;
     try {
+      deletingProjectRef.current = true;
+      setDeletingProject(true);
       const res = await api.delete(`/api/projects/${projectId}`);
       if (res.data.success) {
         const remaining = projects.filter((p) => p.id !== projectId);
@@ -219,6 +249,8 @@ export function useDashboard() {
     } finally {
       setIsDeleteProjOpen(false);
       setProjectToDelete(null);
+      deletingProjectRef.current = false;
+      setDeletingProject(false);
     }
   };
 
@@ -229,8 +261,10 @@ export function useDashboard() {
     status: TaskStatus,
     dueDate: string | null,
   ) => {
-    if (!activeProject) return;
+    if (!activeProject || creatingTaskRef.current) return;
     try {
+      creatingTaskRef.current = true;
+      setCreatingTask(true);
       const res = await api.post(`/api/projects/${activeProject.id}/tasks`, {
         title,
         description,
@@ -248,6 +282,9 @@ export function useDashboard() {
       console.error('Create task failed:', err);
       toast.error(getErrorMessage(err, 'Could not create task.'));
       throw err;
+    } finally {
+      creatingTaskRef.current = false;
+      setCreatingTask(false);
     }
   };
 
@@ -281,7 +318,10 @@ export function useDashboard() {
       remark: string;
     },
   ) => {
+    if (editingTaskRef.current) return;
     try {
+      editingTaskRef.current = true;
+      setEditingTask(true);
       const res = await api.put(`/api/tasks/${taskId}`, fields);
       if (res.data.success) {
         replaceTask(res.data.data);
@@ -292,6 +332,9 @@ export function useDashboard() {
       console.error('Update task failed:', err);
       toast.error(getErrorMessage(err, 'Could not update task.'));
       throw err;
+    } finally {
+      editingTaskRef.current = false;
+      setEditingTask(false);
     }
   };
 
@@ -302,9 +345,11 @@ export function useDashboard() {
   };
 
   const handleDeleteTask = async () => {
-    if (!taskToDelete) return;
+    if (!taskToDelete || deletingTaskRef.current) return;
 
     try {
+      deletingTaskRef.current = true;
+      setDeletingTask(true);
       await api.delete(`/api/tasks/${taskToDelete.id}`);
       setTasks((currentTasks) =>
         currentTasks.filter((task) => task.id !== taskToDelete.id),
@@ -320,6 +365,8 @@ export function useDashboard() {
     } finally {
       setIsDeleteTaskOpen(false);
       setTaskToDelete(null);
+      deletingTaskRef.current = false;
+      setDeletingTask(false);
     }
   };
 
@@ -391,9 +438,11 @@ export function useDashboard() {
   };
 
   const handleSaveLogRemark = async (newRemark: string) => {
-    if (editLogRemarkId === null) return;
+    if (editLogRemarkId === null || savingLogRemarkRef.current) return;
 
     try {
+      savingLogRemarkRef.current = true;
+      setSavingLogRemark(true);
       const res = await api.patch(`/api/logs/${editLogRemarkId}`, {
         remark: newRemark,
       });
@@ -405,6 +454,9 @@ export function useDashboard() {
     } catch (err) {
       console.error('Failed to update log remark:', err);
       toast.error(getErrorMessage(err, 'Could not update remark.'));
+    } finally {
+      savingLogRemarkRef.current = false;
+      setSavingLogRemark(false);
     }
   };
 
@@ -431,12 +483,19 @@ export function useDashboard() {
   };
 
   const handleConfirmMoveTask = async () => {
-    if (!draggedTaskForMove || !moveTargetStatus) return;
+    if (
+      !draggedTaskForMove ||
+      !moveTargetStatus ||
+      savingMoveRemarkRef.current
+    )
+      return;
 
     const taskId = draggedTaskForMove.id;
     const remark = moveRemark.trim() || null;
 
     try {
+      savingMoveRemarkRef.current = true;
+      setSavingMoveRemark(true);
       const res = await api.put(`/api/tasks/${taskId}`, {
         status: moveTargetStatus,
         remark,
@@ -457,6 +516,8 @@ export function useDashboard() {
       setDraggedTaskForMove(null);
       setMoveTargetStatus(null);
       setMoveRemark('');
+      savingMoveRemarkRef.current = false;
+      setSavingMoveRemark(false);
     }
   };
 
@@ -492,6 +553,14 @@ export function useDashboard() {
     dataLoading,
     boardLoading,
     generalError,
+    creatingProject,
+    editingProject,
+    deletingProject,
+    creatingTask,
+    editingTask,
+    deletingTask,
+    savingMoveRemark,
+    savingLogRemark,
     isMoveRemarkOpen,
     moveRemark,
     setMoveRemark,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,10 +16,12 @@ export function CreateProjectDialog({ isOpen, onClose, onCreate, teams }: Create
   const [description, setDescription] = useState('');
   const [teamId, setTeamId] = useState<number | ''>('');
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !teamId) return;
+    if (submittingRef.current || !name || !teamId) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onCreate(name, description, Number(teamId));
@@ -30,6 +32,7 @@ export function CreateProjectDialog({ isOpen, onClose, onCreate, teams }: Create
     } catch (err) {
       console.error('Failed to create project:', err);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

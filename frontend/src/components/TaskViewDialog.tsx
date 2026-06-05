@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Select, {
   SingleValue,
   StylesConfig,
@@ -62,7 +62,10 @@ export function TaskViewDialog({
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [pendingSubtaskIds, setPendingSubtaskIds] = useState<number[]>([]);
   const [displayTask, setDisplayTask] = useState<Task | null>(null);
+  const submittingRef = useRef(false);
+  const pendingSubtaskIdsRef = useRef<number[]>([]);
   const currentTask = displayTask?.id === task?.id ? displayTask : task;
 
   // Auto-refresh task details every 3 seconds while dialog is open
@@ -173,7 +176,8 @@ export function TaskViewDialog({
   };
 
   const handleAddComment = async () => {
-    if (!currentTask || !comment.trim()) return;
+    if (submittingRef.current || !currentTask || !comment.trim()) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const updatedTask = await onAddComment(currentTask.id, comment.trim());
@@ -182,12 +186,14 @@ export function TaskViewDialog({
       }
       setComment('');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleAddSubtask = async () => {
-    if (!currentTask || !subtaskTitle.trim()) return;
+    if (submittingRef.current || !currentTask || !subtaskTitle.trim()) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const updatedTask = await onAddSubtask(
@@ -201,19 +207,33 @@ export function TaskViewDialog({
       setSubtaskTitle('');
       setSubtaskAssignee(null);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleToggleSubtask = async (subtaskId: number, isDone: boolean) => {
-    if (!currentTask) return;
-    const updatedTask = await onToggleSubtask(
-      currentTask.id,
+    if (!currentTask || pendingSubtaskIdsRef.current.includes(subtaskId))
+      return;
+    pendingSubtaskIdsRef.current = [
+      ...pendingSubtaskIdsRef.current,
       subtaskId,
-      isDone,
-    );
-    if (updatedTask) {
-      setDisplayTask(updatedTask);
+    ];
+    setPendingSubtaskIds(pendingSubtaskIdsRef.current);
+    try {
+      const updatedTask = await onToggleSubtask(
+        currentTask.id,
+        subtaskId,
+        isDone,
+      );
+      if (updatedTask) {
+        setDisplayTask(updatedTask);
+      }
+    } finally {
+      pendingSubtaskIdsRef.current = pendingSubtaskIdsRef.current.filter(
+        (id) => id !== subtaskId,
+      );
+      setPendingSubtaskIds(pendingSubtaskIdsRef.current);
     }
   };
 
@@ -283,6 +303,7 @@ export function TaskViewDialog({
                       <input
                         type='checkbox'
                         checked={Boolean(subtask.is_done)}
+                        disabled={pendingSubtaskIds.includes(subtask.id)}
                         onChange={(e) =>
                           void handleToggleSubtask(subtask.id, e.target.checked)
                         }
