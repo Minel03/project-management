@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Select, {
   SingleValue,
   StylesConfig,
@@ -21,42 +21,8 @@ import {
   Plus,
   Play,
 } from 'lucide-react';
-
-interface TaskComment {
-  id: number;
-  task_id: number;
-  user_id: number;
-  username: string;
-  comment: string;
-  created_at: string;
-}
-
-interface Subtask {
-  id: number;
-  task_id: number;
-  title: string;
-  assigned_to: number | null;
-  assignee_name: string | null;
-  is_done: boolean | number;
-}
-
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: 'Todo' | 'In Progress' | 'Done';
-  started_by_name: string | null;
-  due_date: string | null;
-  assignees?: { id: number; username: string }[];
-  comments?: TaskComment[];
-  subtasks?: Subtask[];
-}
-
-interface Member {
-  id: number;
-  username: string;
-  email: string;
-}
+import api from '@/utils/api';
+import type { Member, Task } from '@/types/dashboard';
 
 interface SelectOption {
   value: string;
@@ -96,9 +62,35 @@ export function TaskViewDialog({
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [displayTask, setDisplayTask] = useState<Task | null>(null);
+  const currentTask = displayTask?.id === task?.id ? displayTask : task;
+
+  // Auto-refresh task details every 3 seconds while dialog is open
+  useEffect(() => {
+    if (!isOpen || !task) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/api/projects/${task.project_id}`);
+        if (res.data.success) {
+          const updatedTask = res.data.data.tasks?.find(
+            (t: Task) => t.id === task.id,
+          );
+          if (updatedTask) {
+            setDisplayTask(updatedTask);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to refresh task:', err);
+      }
+    }, 3000); // Refresh every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [isOpen, task]);
 
   const completedSubtasks =
-    task?.subtasks?.filter((subtask) => Boolean(subtask.is_done)).length ?? 0;
+    currentTask?.subtasks?.filter((subtask) => Boolean(subtask.is_done))
+      .length ?? 0;
 
   const assigneeOptions = members.map((member) => ({
     value: String(member.id),
@@ -181,10 +173,10 @@ export function TaskViewDialog({
   };
 
   const handleAddComment = async () => {
-    if (!task || !comment.trim()) return;
+    if (!currentTask || !comment.trim()) return;
     setSubmitting(true);
     try {
-      await onAddComment(task.id, comment.trim());
+      await onAddComment(currentTask.id, comment.trim());
       setComment('');
     } finally {
       setSubmitting(false);
@@ -192,11 +184,11 @@ export function TaskViewDialog({
   };
 
   const handleAddSubtask = async () => {
-    if (!task || !subtaskTitle.trim()) return;
+    if (!currentTask || !subtaskTitle.trim()) return;
     setSubmitting(true);
     try {
       await onAddSubtask(
-        task.id,
+        currentTask.id,
         subtaskTitle.trim(),
         subtaskAssignee ? parseInt(subtaskAssignee.value, 10) : null,
       );
@@ -214,39 +206,39 @@ export function TaskViewDialog({
       <DialogContent className='bg-popover border border-border text-popover-foreground sm:max-w-2xl rounded-3xl p-6 max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='text-base font-bold text-foreground'>
-            {task?.title ?? 'Task Details'}
+            {currentTask?.title ?? 'Task Details'}
           </DialogTitle>
-          {task ? (
+          {currentTask ? (
             <div className='flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground'>
               <span className='rounded-md border border-border bg-background px-2 py-1 font-semibold'>
-                {task.status}
+                {currentTask.status}
               </span>
-              {task.started_by_name ? (
+              {currentTask.started_by_name ? (
                 <span className='inline-flex items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-950/40 px-2 py-1 font-semibold text-emerald-300'>
                   <Play className='h-3 w-3' />
-                  Started by {task.started_by_name}
+                  Started by {currentTask.started_by_name}
                 </span>
               ) : null}
-              {task.due_date ? (
+              {currentTask.due_date ? (
                 <span className='inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-amber-100 px-2 py-1 font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300'>
                   <CalendarDays className='h-3 w-3' />
-                  Due {formatDueDate(task.due_date)}
+                  Due {formatDueDate(currentTask.due_date)}
                 </span>
               ) : null}
             </div>
           ) : null}
         </DialogHeader>
 
-        {task ? (
+        {currentTask ? (
           <>
             <div className='rounded-xl border border-border bg-background/60 p-4'>
               <p className='text-xs leading-relaxed text-foreground/85'>
-                {task.description || 'No description.'}
+                {currentTask.description || 'No description.'}
               </p>
               <p className='mt-3 text-[10px] text-muted-foreground'>
                 Assignees:{' '}
-                {task.assignees?.length
-                  ? task.assignees
+                {currentTask.assignees?.length
+                  ? currentTask.assignees
                       .map((assignee) => assignee.username)
                       .join(', ')
                   : 'Unassigned'}
@@ -261,12 +253,12 @@ export function TaskViewDialog({
                     Checklist
                   </div>
                   <span className='text-[10px] text-muted-foreground'>
-                    {completedSubtasks}/{task.subtasks?.length ?? 0}
+                    {completedSubtasks}/{currentTask.subtasks?.length ?? 0}
                   </span>
                 </div>
 
                 <div className='space-y-2'>
-                  {(task.subtasks ?? []).map((subtask) => (
+                  {(currentTask.subtasks ?? []).map((subtask) => (
                     <label
                       key={subtask.id}
                       className='flex items-start gap-2 rounded-lg border border-border bg-card/60 p-2 text-xs text-foreground/85'>
@@ -274,7 +266,11 @@ export function TaskViewDialog({
                         type='checkbox'
                         checked={Boolean(subtask.is_done)}
                         onChange={(e) =>
-                          onToggleSubtask(task.id, subtask.id, e.target.checked)
+                          onToggleSubtask(
+                            currentTask.id,
+                            subtask.id,
+                            e.target.checked,
+                          )
                         }
                         className='mt-0.5 h-3.5 w-3.5 accent-emerald-500'
                       />
@@ -346,12 +342,12 @@ export function TaskViewDialog({
                   Comments
                 </div>
                 <div className='max-h-56 space-y-3 overflow-y-auto pr-1'>
-                  {(task.comments ?? []).length === 0 ? (
+                  {(currentTask.comments ?? []).length === 0 ? (
                     <p className='text-xs text-muted-foreground'>
                       No comments yet.
                     </p>
                   ) : (
-                    (task.comments ?? []).map((taskComment) => (
+                    (currentTask.comments ?? []).map((taskComment) => (
                       <div
                         key={taskComment.id}
                         className='rounded-lg border border-border bg-card/60 p-3'>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,16 +21,10 @@ export function EditLogRemarkDialog({
   currentRemark,
   onSave,
 }: EditLogRemarkDialogProps) {
-  const [remark, setRemark] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setRemark(currentRemark || '');
-    }
-  }, [isOpen, currentRemark]);
+  const remarkRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSave = () => {
-    onSave(remark.trim());
+    onSave(remarkRef.current?.value.trim() ?? '');
     onClose();
   };
 
@@ -50,10 +44,11 @@ export function EditLogRemarkDialog({
               Remark/Reason for Status Change
             </label>
             <Textarea
+              key={`${isOpen}-${currentRemark ?? ''}`}
+              ref={remarkRef}
               id='remark'
               placeholder='Enter remark...'
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
+              defaultValue={currentRemark || ''}
               className='h-32'
             />
           </div>
